@@ -232,7 +232,7 @@ Fires: Coordinated expression + posture + gesture + gaze + idle + mode
    GEMINI_API_KEYS=your_api_key_here
    ```
    
-   > ⚠️ **Note**: The Gemini API key loading is currently not working properly. This is a known issue being investigated. The app will show "API KEY MISSING" error until this is resolved.
+   You can add multiple keys separated by commas for automatic rotation.
 
 3. **Run locally:**
    ```bash
