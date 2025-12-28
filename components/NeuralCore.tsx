@@ -24,6 +24,9 @@ import { getEasingFunction, type EasingType } from '../utils/animationBlender';
 import { updateSaccadeState, DEFAULT_SACCADE_CONFIG } from '../utils/saccadeGenerator';
 import { calculateBreathingState, getStateMultiplier } from '../utils/breathingAnimator';
 import { calculateWalkingBob, smoothTransitionBob, DEFAULT_WALKING_CONFIG } from '../utils/walkingAnimator';
+import { calculateLegPose, calculateArmSwingPose, calculateWalkPhase } from '../utils/walkingController';
+import type { WalkingBehaviorConfig } from '../types/walkingBehaviorTypes';
+import { DEFAULT_WALKING_BEHAVIOR } from '../types/walkingBehaviorTypes';
 import type { BreathingConfig } from '../types/enhancementTypes';
 
 export interface PoseSettings {
@@ -38,6 +41,11 @@ export interface NeuralCoreHandle {
   previewExpression: (expressionName: string, value: number) => void;
   previewReaction: (reactionName: string) => void;
   resetExpressions: () => void;
+  setWalkingBehavior: (config: Partial<WalkingBehaviorConfig>) => void;
+  getWalkingBehavior: () => WalkingBehaviorConfig;
+  startWalking: () => void;
+  stopWalking: () => void;
+  isWalking: () => boolean;
 }
 
 interface NeuralCoreProps {
@@ -150,6 +158,7 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
   const walkStateRef = useRef({ speed: 0, direction: 0, isWalking: false, position: { x: 0, y: 0, z: 0 } });
   const legAngleRef = useRef(0); // For procedural leg animation
   const walkBobOffsetRef = useRef(0); // Current vertical bob offset for smooth transitions
+  const walkingBehaviorRef = useRef<WalkingBehaviorConfig>({ ...DEFAULT_WALKING_BEHAVIOR });
 
   // Camera smooth transition targets
   const cameraTargetPosition = useRef({ x: 0, y: 1.4, z: 1.5 });
@@ -664,16 +673,63 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     }
   };
 
-  // Walk/pace in space
+  // Walk/pace in space - now uses walking behavior config
   const walk = (direction: number, speed: number = 1.0) => {
     walkStateRef.current.direction = direction; // 0=forward, 1=backward, 0.5=strafe
     walkStateRef.current.speed = speed;
     walkStateRef.current.isWalking = speed > 0;
+    // Sync with walking behavior config
+    walkingBehaviorRef.current.enabled = speed > 0;
+    walkingBehaviorRef.current.speed = speed;
   };
 
   const stopWalking = () => {
     walkStateRef.current.isWalking = false;
     walkStateRef.current.speed = 0;
+    walkingBehaviorRef.current.enabled = false;
+    walkingBehaviorRef.current.speed = 0;
+  };
+
+  // Set walking behavior configuration
+  const setWalkingBehavior = (config: Partial<WalkingBehaviorConfig>) => {
+    walkingBehaviorRef.current = { ...walkingBehaviorRef.current, ...config };
+    // Sync with walk state
+    if (config.enabled !== undefined) {
+      walkStateRef.current.isWalking = config.enabled;
+    }
+    if (config.speed !== undefined) {
+      walkStateRef.current.speed = config.speed;
+    }
+    if (config.direction !== undefined) {
+      // Map direction string to numeric value
+      const dirMap: Record<string, number> = {
+        forward: 0,
+        backward: 1,
+        strafeLeft: 0.25,
+        strafeRight: 0.75,
+      };
+      walkStateRef.current.direction = dirMap[config.direction] ?? 0;
+    }
+  };
+
+  // Get current walking behavior configuration
+  const getWalkingBehavior = (): WalkingBehaviorConfig => {
+    return { ...walkingBehaviorRef.current };
+  };
+
+  // Start walking with current config
+  const startWalkingWithConfig = () => {
+    walkingBehaviorRef.current.enabled = true;
+    if (walkingBehaviorRef.current.speed <= 0) {
+      walkingBehaviorRef.current.speed = 1.0;
+    }
+    walkStateRef.current.isWalking = true;
+    walkStateRef.current.speed = walkingBehaviorRef.current.speed;
+  };
+
+  // Check if currently walking
+  const isCurrentlyWalking = (): boolean => {
+    return walkStateRef.current.isWalking;
   };
 
   // Play animation clip if available
@@ -717,7 +773,22 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
       for (const name of Object.keys(expressionTargetsActual.current)) {
         expressionTargetsActual.current[name] = 0;
       }
-    }
+    },
+    setWalkingBehavior: (config: Partial<WalkingBehaviorConfig>) => {
+      setWalkingBehavior(config);
+    },
+    getWalkingBehavior: () => {
+      return getWalkingBehavior();
+    },
+    startWalking: () => {
+      startWalkingWithConfig();
+    },
+    stopWalking: () => {
+      stopWalking();
+    },
+    isWalking: () => {
+      return isCurrentlyWalking();
+    },
   }), [playGesture, triggerEmotion]);
 
   useEffect(() => {
@@ -1185,8 +1256,15 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
               walkStateRef.current.position.x = Math.max(-2, Math.min(2, walkStateRef.current.position.x));
               walkStateRef.current.position.z = Math.max(-1.5, Math.min(1.5, walkStateRef.current.position.z));
               
-              // Calculate walking bob (vertical bounce synced with leg movement)
-              const walkBobState = calculateWalkingBob(walkStateRef.current.speed, elapsedTime, DEFAULT_WALKING_CONFIG);
+              // Get walking behavior config for bob and animation
+              const walkConfig = walkingBehaviorRef.current;
+              
+              // Calculate walking bob using behavior config
+              const walkBobConfig = {
+                bobIntensity: walkConfig.bobIntensity,
+                bobFrequency: walkConfig.bobFrequency,
+              };
+              const walkBobState = calculateWalkingBob(walkStateRef.current.speed, elapsedTime, walkBobConfig);
               walkBobOffsetRef.current = smoothTransitionBob(walkBobOffsetRef.current, walkBobState.verticalOffset, delta, 8.0);
               
               // Apply to VRM scene (preserve base Y offset from height adjustment + add bob)
@@ -1194,12 +1272,42 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
               vrm.scene.position.y = walkStateRef.current.position.y + walkBobOffsetRef.current;
               vrm.scene.position.z = walkStateRef.current.position.z;
               
-              // Animate legs procedurally
-              legAngleRef.current += delta * walkStateRef.current.speed * 8; // Leg animation speed
-              const leftLeg = vrm.humanoid.getNormalizedBoneNode('leftLowerLeg');
-              const rightLeg = vrm.humanoid.getNormalizedBoneNode('rightLowerLeg');
-              if (leftLeg) leftLeg.rotation.x = Math.sin(legAngleRef.current) * 0.6;
-              if (rightLeg) rightLeg.rotation.x = Math.sin(legAngleRef.current + Math.PI) * 0.6;
+              // Calculate walk phase for leg and arm animation
+              const walkPhase = calculateWalkPhase(elapsedTime, walkStateRef.current.speed);
+              
+              // Calculate leg poses using walking controller
+              const legPose = calculateLegPose(walkPhase, walkConfig);
+              
+              // Apply leg rotations
+              const leftUpperLeg = vrm.humanoid.getNormalizedBoneNode('leftUpperLeg');
+              const rightUpperLeg = vrm.humanoid.getNormalizedBoneNode('rightUpperLeg');
+              const leftLowerLeg = vrm.humanoid.getNormalizedBoneNode('leftLowerLeg');
+              const rightLowerLeg = vrm.humanoid.getNormalizedBoneNode('rightLowerLeg');
+              const leftFoot = vrm.humanoid.getNormalizedBoneNode('leftFoot');
+              const rightFoot = vrm.humanoid.getNormalizedBoneNode('rightFoot');
+              
+              if (leftUpperLeg) {
+                leftUpperLeg.rotation.x = legPose.leftUpperLeg.x;
+                leftUpperLeg.rotation.z = legPose.leftUpperLeg.z;
+              }
+              if (rightUpperLeg) {
+                rightUpperLeg.rotation.x = legPose.rightUpperLeg.x;
+                rightUpperLeg.rotation.z = legPose.rightUpperLeg.z;
+              }
+              if (leftLowerLeg) leftLowerLeg.rotation.x = legPose.leftLowerLeg.x;
+              if (rightLowerLeg) rightLowerLeg.rotation.x = legPose.rightLowerLeg.x;
+              if (leftFoot) leftFoot.rotation.x = legPose.leftFoot.x;
+              if (rightFoot) rightFoot.rotation.x = legPose.rightFoot.x;
+              
+              // Calculate and apply arm swing if enabled
+              if (walkConfig.armSwing.enabled) {
+                const armPose = calculateArmSwingPose(walkPhase, walkConfig);
+                const leftUpperArm = vrm.humanoid.getNormalizedBoneNode('leftUpperArm');
+                const rightUpperArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm');
+                
+                if (leftUpperArm) leftUpperArm.rotation.x += armPose.leftUpperArm.x;
+                if (rightUpperArm) rightUpperArm.rotation.x += armPose.rightUpperArm.x;
+              }
             } else {
               // Smoothly return bob to zero when not walking
               walkBobOffsetRef.current = smoothTransitionBob(walkBobOffsetRef.current, 0, delta, 5.0);

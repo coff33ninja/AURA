@@ -15,6 +15,8 @@ import {
   saveToStorage
 } from "./services/behaviorManager";
 import type { ModelBehaviors, BehaviorType, BehaviorConfigs } from "./types/behaviorTypes";
+import type { WalkingBehaviorConfig } from "./types/walkingBehaviorTypes";
+import { DEFAULT_WALKING_BEHAVIOR } from "./types/walkingBehaviorTypes";
 import {
   captureAndDownloadScreenshot,
   createRecordingSession,
@@ -55,6 +57,10 @@ const App: React.FC = () => {
   const neuralCoreRef = useRef<NeuralCoreHandle>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentBehaviors, setCurrentBehaviors] = useState<ModelBehaviors | null>(null);
+  
+  // Walking state
+  const [walkingConfig, setWalkingConfig] = useState<WalkingBehaviorConfig | null>(null);
+  const [isWalking, setIsWalking] = useState(false);
 
   // Dynamic VRM model loading
   const [availableVrms, setAvailableVrms] = useState<string[]>([]);
@@ -211,6 +217,25 @@ const App: React.FC = () => {
     neuralCoreRef.current?.previewReaction(reactionName);
   }, []);
   
+  // Walking control handlers
+  const handleWalkingChange = useCallback((config: Partial<WalkingBehaviorConfig>) => {
+    setWalkingConfig(prev => {
+      const newConfig = { ...(prev || DEFAULT_WALKING_BEHAVIOR), ...config };
+      neuralCoreRef.current?.setWalkingBehavior(newConfig);
+      return newConfig;
+    });
+  }, []);
+  
+  const handleStartWalking = useCallback(() => {
+    neuralCoreRef.current?.startWalking();
+    setIsWalking(true);
+  }, []);
+  
+  const handleStopWalking = useCallback(() => {
+    neuralCoreRef.current?.stopWalking();
+    setIsWalking(false);
+  }, []);
+  
   const updatePoseSettings = (updates: Partial<PoseSettings>) => {
     const newSettings = { ...currentPoseSettings, ...updates };
     const newAllSettings = { ...allPoseSettings, [selectedVrm]: newSettings };
@@ -361,6 +386,13 @@ const App: React.FC = () => {
       setCurrentBehaviors(behaviors);
       if (liveManagerRef.current) {
         liveManagerRef.current.setBehaviors(behaviors);
+      }
+      // Initialize walking config from NeuralCore
+      const currentWalkingConfig = neuralCoreRef.current?.getWalkingBehavior();
+      if (currentWalkingConfig) {
+        setWalkingConfig(currentWalkingConfig);
+      } else {
+        setWalkingConfig({ ...DEFAULT_WALKING_BEHAVIOR });
       }
     });
     
@@ -676,6 +708,11 @@ const App: React.FC = () => {
                   saveToStorage(selectedVrm.replace('.vrm', ''));
                 }
               }}
+              walkingConfig={walkingConfig || undefined}
+              onWalkingChange={handleWalkingChange}
+              isWalking={isWalking}
+              onStartWalking={handleStartWalking}
+              onStopWalking={handleStopWalking}
             />
           </div>
         )}

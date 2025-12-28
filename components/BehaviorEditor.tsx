@@ -21,7 +21,9 @@ import {
   FacialPreset,
 } from '../types/behaviorTypes';
 import type { BackgroundConfig, SolidBackground, GradientBackground } from '../types/enhancementTypes';
+import type { WalkingBehaviorConfig } from '../types/walkingBehaviorTypes';
 import { BACKGROUND_PRESETS, isValidHexColor, saveBackgroundPreference, loadBackgroundPreference } from '../utils/backgroundRenderer';
+import { WalkingEditor } from './WalkingEditor';
 
 interface BehaviorEditorProps {
   isOpen: boolean;
@@ -37,9 +39,14 @@ interface BehaviorEditorProps {
   onSave: () => void;
   backgroundConfig?: BackgroundConfig;
   onBackgroundChange?: (config: BackgroundConfig) => void;
+  walkingConfig?: WalkingBehaviorConfig;
+  onWalkingChange?: (config: Partial<WalkingBehaviorConfig>) => void;
+  isWalking?: boolean;
+  onStartWalking?: () => void;
+  onStopWalking?: () => void;
 }
 
-type TabType = 'transform' | 'body' | 'hands' | 'facial' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'background' | 'import-export';
+type TabType = 'transform' | 'body' | 'hands' | 'facial' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'walking' | 'background' | 'import-export';
 
 const TABS: { id: TabType; label: string }[] = [
   { id: 'transform', label: 'Transform' },
@@ -51,6 +58,7 @@ const TABS: { id: TabType; label: string }[] = [
   { id: 'idle', label: 'Idle' },
   { id: 'lipsync', label: 'Lip Sync' },
   { id: 'reactions', label: 'Reactions' },
+  { id: 'walking', label: 'Walking' },
   { id: 'background', label: 'Background' },
   { id: 'import-export', label: 'Import/Export' },
 ];
@@ -69,6 +77,11 @@ export function BehaviorEditor({
   onSave,
   backgroundConfig,
   onBackgroundChange,
+  walkingConfig,
+  onWalkingChange,
+  isWalking = false,
+  onStartWalking,
+  onStopWalking,
 }: BehaviorEditorProps) {
   const [activeTab, setActiveTab] = useState<TabType>('transform');
 
@@ -230,6 +243,15 @@ export function BehaviorEditor({
                   currentHands={behaviors.hands}
                   currentFacial={behaviors.facial}
                   availableGestures={behaviors.gestures.gestures}
+                />
+              )}
+              {activeTab === 'walking' && walkingConfig && onWalkingChange && onStartWalking && onStopWalking && (
+                <WalkingEditor
+                  config={walkingConfig}
+                  onChange={onWalkingChange}
+                  isWalking={isWalking}
+                  onStartWalking={onStartWalking}
+                  onStopWalking={onStopWalking}
                 />
               )}
               {activeTab === 'background' && (
