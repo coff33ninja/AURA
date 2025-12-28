@@ -29,7 +29,8 @@ const App: React.FC = () => {
     localStorage.getItem(STORAGE_KEYS.selectedVrm) || ''
   );
 
-  const voiceModels = ['Kore', 'Ava', 'Deep', 'Neutral'];
+  // Valid Gemini Live API voice names
+  const voiceModels = ['Kore', 'Puck', 'Charon', 'Fenrir', 'Aoede', 'Leda', 'Orus', 'Zephyr'];
   const [selectedVoice, setSelectedVoice] = useState<string>(() => 
     localStorage.getItem(STORAGE_KEYS.selectedVoice) || voiceModels[0]
   );

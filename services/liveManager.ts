@@ -52,7 +52,9 @@ export class LiveManager {
     public onClose: () => void = () => {};
 
     constructor(apiKeysCsv: string) {
+        console.log('[LiveManager] Initializing with API keys...');
         this.apiKeys = apiKeysCsv.split(',').map(k => k.trim()).filter(k => k);
+        console.log(`[LiveManager] Found ${this.apiKeys.length} API key(s)`);
         if (this.apiKeys.length === 0) {
             throw new Error("No Gemini API keys provided.");
         }
@@ -106,6 +108,8 @@ export class LiveManager {
     }
 
     async connect() {
+        console.log('[LiveManager] Starting connection...');
+        console.log(`[LiveManager] Model: ${this.modelName}, Voice: ${this.voiceName}`);
         this.onStatusChange("Initializing Audio...");
         
         // 1. Setup Audio Contexts
@@ -115,6 +119,7 @@ export class LiveManager {
         // Resume contexts just in case (browsers policy)
         await this.inputAudioContext.resume();
         await this.outputAudioContext.resume();
+        console.log('[LiveManager] Audio contexts initialized');
 
         // 2. Setup Output Graph (Gapless Playback + Visualization)
         this.analyser = this.outputAudioContext.createAnalyser();
@@ -133,11 +138,13 @@ export class LiveManager {
             this.onStatusChange("Mic access requires HTTPS.");
             throw new Error("Media Devices API not available. Please use an HTTPS connection.");
         }
+        console.log('[LiveManager] Requesting microphone access...');
         const stream = await navigator.mediaDevices.getUserMedia({ audio: {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true
         }});
+        console.log('[LiveManager] Microphone access granted');
 
         this.onStatusChange("Connecting to Neural Core...");
 
@@ -146,10 +153,13 @@ export class LiveManager {
 
         for (let i = 0; i < this.apiKeys.length; i++) {
             const apiKey = this.getNextApiKey();
-            this.onStatusChange(`Attempting connection with key ${this.currentApiKeyIndex}...`);
+            const maskedKey = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 4);
+            console.log(`[LiveManager] Attempting connection with key ${i + 1}/${this.apiKeys.length}: ${maskedKey}`);
+            this.onStatusChange(`Trying key ${i + 1}/${this.apiKeys.length}...`);
             
             try {
                 this.client = new GoogleGenAI({ apiKey });
+                console.log('[LiveManager] GoogleGenAI client created, connecting to live session...');
                 this.sessionPromise = this.client.live.connect({
                     model: this.modelName,
                     config: {
@@ -203,6 +213,7 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
                     },
                     callbacks: {
                         onopen: () => {
+                            console.log('[LiveManager] ✅ Connection opened successfully!');
                             this.onStatusChange("Connected");
                             this.startRecording(stream).catch(e => console.error('Failed to start recording:', e));
                         },
@@ -211,6 +222,7 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
                             const textPart = message.serverContent?.modelTurn?.parts?.find((part: any) => part.text);
                             if (textPart) {
                                 textContent = textPart.text;
+                                console.log('[LiveManager] Received text:', textContent.substring(0, 100) + (textContent.length > 100 ? '...' : ''));
                                 // Check for VRM commands: expressions, bone rotations, lookAt, and poses
                                 // EXPRESSION: [COMMAND:EXPRESSION:name:value]
                                 // BONE:       [COMMAND:BONE:boneName:rotX:rotY:rotZ] (radians)
@@ -318,11 +330,12 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
                             }
                         },
                         onclose: () => {
+                            console.log('[LiveManager] Connection closed');
                             this.onStatusChange("Disconnected");
                             this.disconnect();
                         },
                         onerror: (err) => {
-                            console.error("Live API Error:", err);
+                            console.error("[LiveManager] ❌ Live API Error:", err);
                             // This error might not be fatal for the connection attempt, 
                             // but we'll disconnect and let the loop try the next key.
                             this.disconnect();
@@ -330,12 +343,14 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
                     }
                 });
 
+                console.log('[LiveManager] Waiting for session promise...');
                 await this.sessionPromise;
+                console.log('[LiveManager] Session established successfully');
                 // If we reach here, connection was successful
                 return; 
 
-            } catch (error) {
-                console.error(`Connection failed with key ${this.currentApiKeyIndex}:`, error);
+            } catch (error: any) {
+                console.error(`[LiveManager] ❌ Connection failed with key ${i + 1}:`, error?.message || error);
                 connectionError = error;
                 // The sessionPromise might have been rejected, clean up before next attempt
                 this.disconnect(); 
@@ -343,6 +358,7 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
         }
 
         // If the loop completes without a successful connection
+        console.error('[LiveManager] ❌ All API keys exhausted, connection failed');
         this.onStatusChange("Connection Failed");
         throw new Error("Could not connect to Gemini Live API with any of the provided keys. Last error: " + connectionError?.message);
     }
