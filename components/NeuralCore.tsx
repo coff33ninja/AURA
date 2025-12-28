@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { VRMLoaderPlugin, VRM, VRMHumanBoneName, VRMUtils } from '@pixiv/three-vrm';
+import { VRM, VRMHumanBoneName, VRMUtils } from '@pixiv/three-vrm';
 import type { VrmCommand } from '../services/liveManager';
 import { VrmConfig, getVrmConfig, saveVrmConfigToStorage, DEFAULT_VRM_CONFIG } from '../types/vrmConfig';
 import { 
@@ -9,6 +8,7 @@ import {
   getCurrentBehaviors, 
   onBehaviorChanged 
 } from '../services/behaviorManager';
+import { getGlobalVrmModelManager } from '../services/vrmModelManager';
 import type { 
   ModelBehaviors,
   GestureDefinition, 
@@ -775,49 +775,24 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     scene.add(particles);
     particlesRef.current = particles;
 
-    // 4. VRM Loader
-    const loader = new GLTFLoader();
-
-    // Intercept parser JSON to dedupe duplicate expression/blendShape group names
-    loader.register((parser) => {
-      try {
-        const json = (parser as any).json;
-        if (json && json.extensions) {
-          const tryPaths = [
-            ['extensions','VRM','blendShapeMaster','blendShapeGroups'],
-            ['extensions','VRMC_vrm','blendShapeMaster','blendShapeGroups'],
-            ['extensions','VRMC_vrm','blendShapeGroups']
-          ];
-
-          const getPath = (obj: any, path: string[]) => path.reduce((a, k) => (a && a[k] !== undefined) ? a[k] : undefined, obj);
-
-          tryPaths.forEach(path => {
-            const groups = getPath(json, path);
-            if (Array.isArray(groups) && groups.length > 0) {
-              const seen = new Set<string>();
-              for (let i = 0; i < groups.length; i++) {
-                const g = groups[i];
-                const name = (g && (g.name || g.presetName || g.preset || g.name)) || (`expr_${i}`);
-                if (seen.has(name)) {
-                  // Rename duplicate to keep unique keys while preserving array indices
-                  let suffix = 1;
-                  let newName = `${name}_dup${suffix}`;
-                  while (seen.has(newName)) { suffix++; newName = `${name}_dup${suffix}`; }
-                  if (g) g.name = newName;
-                  seen.add(newName);
-                  console.warn('VRM loader: renamed duplicate expression preset', name, '->', newName);
-                } else {
-                  seen.add(name);
-                }
-              }
-            }
-          });
-        }
-      } catch (e) {
-        console.warn('Failed to dedupe VRM expressions:', e);
-      }
-
-      return new VRMLoaderPlugin(parser);
+    // 4. VRM Loader - Use the global model manager for caching
+    const modelManager = getGlobalVrmModelManager({
+      onLoadStart: (modelName) => {
+        console.log('[NeuralCore] Model load started:', modelName);
+        setIsLoading(true);
+        setLoadProgress(0);
+      },
+      onLoadProgress: (modelName, progress) => {
+        setLoadProgress(Math.round(progress));
+      },
+      onLoadComplete: (modelName, vrm) => {
+        console.log('[NeuralCore] Model load complete:', modelName);
+      },
+      onLoadError: (modelName, error) => {
+        console.error('[NeuralCore] Model load error:', modelName, error);
+        setLoadError(`Failed to load model: ${modelName}`);
+        setIsLoading(false);
+      },
     });
 
     // Handle custom VRM URLs (object URLs) vs built-in models
@@ -997,11 +972,9 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
       console.log('[NeuralCore] Behavior updated:', type);
     });
     
-    loader.load(
-      vrmUrl,
-      async (gltf) => {
+    // Load VRM using the model manager (with caching)
+    modelManager.loadModel(vrmUrl).then(async (vrm) => {
         setLoadError(null);
-        const vrm = gltf.userData.vrm as VRM;
         
         // Get the loaded config (should be ready by now)
         const config = vrmConfigRef.current;
@@ -1136,12 +1109,6 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         // Setup animation mixer
         mixerRef.current = new THREE.AnimationMixer(vrm.scene);
         availableAnimations.current.clear();
-        if (gltf.animations && gltf.animations.length > 0) {
-          gltf.animations.forEach(clip => {
-            availableAnimations.current.set(clip.name, clip);
-            console.log('Available animation:', clip.name);
-          });
-        }
 
         // Initialize expressionValues keys to zero for smooth control
         try {
@@ -1165,19 +1132,13 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         console.log("VRM Loaded");
         setLoadProgress(100);
         setIsLoading(false);
-      },
-      (progress) => {
-        const pct = progress.total > 0 ? (progress.loaded / progress.total) * 100 : 0;
-        setLoadProgress(Math.round(pct));
-      },
-      (error) => {
+    }).catch((error) => {
         console.error('VRM Load Error:', error);
         setLoadError(`Failed to load model: ${vrmModel}`);
         setIsLoading(false);
         // Notify parent that this model has no valid expressions
         onVrmExpressionsLoaded(['joy', 'angry', 'sorrow', 'fun', 'blink', 'a', 'i', 'u', 'e', 'o']);
-      }
-    );
+    });
 
     // 5. Animation Loop
     let animationId: number;
