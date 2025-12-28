@@ -1,59 +1,113 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ConnectionState } from './types';
-import { LiveManager, VrmCommand } from './services/liveManager';
-import { NeuralCore } from './components/NeuralCore';
-import { conversationStore } from './services/conversationStore';
+import React, { useState, useEffect, useRef } from "react";
+import { ConnectionState } from "./types";
+import { LiveManager, VrmCommand } from "./services/liveManager";
+import { NeuralCore } from "./components/NeuralCore";
+import { conversationStore } from "./services/conversationStore";
 
 // localStorage keys for user preferences
 const STORAGE_KEYS = {
-  selectedVrm: 'aura_selectedVrm',
-  selectedVoice: 'aura_selectedVoice',
-  selectedPersonality: 'aura_selectedPersonality',
-  selectedMode: 'aura_selectedMode',
+  selectedVrm: "aura_selectedVrm",
+  selectedVoice: "aura_selectedVoice",
+  selectedPersonality: "aura_selectedPersonality",
+  selectedMode: "aura_selectedMode",
 };
 
 const App: React.FC = () => {
-  const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    ConnectionState.DISCONNECTED
+  );
   const [statusText, setStatusText] = useState("STANDBY");
   const [volume, setVolume] = useState(0);
   const [micVolume, setMicVolume] = useState(0);
   const [vrmCommand, setVrmCommand] = useState<VrmCommand | null>(null);
   const [vrmExpressions, setVrmExpressions] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [subtitleText, setSubtitleText] = useState<string>('');
+  const [subtitleText, setSubtitleText] = useState<string>("");
   const subtitleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const liveManagerRef = useRef<LiveManager | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  
+
   // Dynamic VRM model loading
   const [availableVrms, setAvailableVrms] = useState<string[]>([]);
-  const [selectedVrm, setSelectedVrm] = useState<string>(() => 
-    localStorage.getItem(STORAGE_KEYS.selectedVrm) || ''
+  const [selectedVrm, setSelectedVrm] = useState<string>(
+    () => localStorage.getItem(STORAGE_KEYS.selectedVrm) || ""
   );
 
   // Valid Gemini Live API voice names
-  const voiceModels = ['Kore', 'Puck', 'Charon', 'Fenrir', 'Aoede', 'Leda', 'Orus', 'Zephyr'];
-  const [selectedVoice, setSelectedVoice] = useState<string>(() => 
-    localStorage.getItem(STORAGE_KEYS.selectedVoice) || voiceModels[0]
+  const voiceModels = [
+    "Kore",
+    "Puck",
+    "Charon",
+    "Fenrir",
+    "Aoede",
+    "Leda",
+    "Orus",
+    "Zephyr",
+  ];
+  const [selectedVoice, setSelectedVoice] = useState<string>(
+    () => localStorage.getItem(STORAGE_KEYS.selectedVoice) || voiceModels[0]
   );
 
   const personalities = [
-    { id: 'default', label: 'Default', instruction: null },
-    { id: 'witty', label: 'Witty', instruction: "You are Aura: witty, playful, concise." },
-    { id: 'calm', label: 'Calm', instruction: "You are Aura: calm, measured, empathetic." }
+    { id: "default", label: "Default", instruction: null },
+    {
+      id: "witty",
+      label: "Witty",
+      instruction: "Be witty, playful, and concise. Use [COMMAND:EXPRESSION:fun:0.8] often. Smirk with [COMMAND:EXPRESSION:fun:0.6] when being sarcastic. Use [COMMAND:GESTURE:peace_sign] or [COMMAND:GESTURE:thumbs_up] to punctuate jokes.",
+    },
+    {
+      id: "calm",
+      label: "Calm",
+      instruction: "Be calm, measured, and empathetic. Use soft expressions like [COMMAND:EXPRESSION:joy:0.4]. Prefer gentle gestures like [COMMAND:GESTURE:open_hand] and [COMMAND:GESTURE:prayer]. Move slowly and deliberately.",
+    },
+    {
+      id: "energetic",
+      label: "Energetic",
+      instruction: "Be enthusiastic and high-energy! Use strong expressions [COMMAND:EXPRESSION:joy:1.0] and [COMMAND:EXPRESSION:fun:1.0]. Gesture frequently with [COMMAND:GESTURE:hands_up], [COMMAND:GESTURE:applause], [COMMAND:GESTURE:wave]. Express excitement with [EMOTION:excited] and [EMOTION:delighted].",
+    },
+    {
+      id: "flirty",
+      label: "Flirty",
+      instruction: "Be playfully flirtatious and charming. Use coy expressions mixing [COMMAND:EXPRESSION:fun:0.7] with [COMMAND:EXPRESSION:blink:1.0]. Tilt head with [COMMAND:GESTURE:thinking]. Use [EMOTION:sarcastic] for teasing. Be confident but not aggressive.",
+    },
+    {
+      id: "professional",
+      label: "Professional",
+      instruction: "Be professional, articulate, and helpful. Use measured expressions [COMMAND:EXPRESSION:joy:0.3]. Gesture purposefully with [COMMAND:GESTURE:point] when explaining and [COMMAND:GESTURE:open_hand] when offering help. Maintain composed posture.",
+    },
+    {
+      id: "shy",
+      label: "Shy",
+      instruction: "Be gentle, soft-spoken, and a bit bashful. Use subtle expressions [COMMAND:EXPRESSION:joy:0.3] and occasional [COMMAND:EXPRESSION:sorrow:0.2] when uncertain. Use [EMOTION:embarrassed] when complimented. Prefer small gestures like [COMMAND:GESTURE:prayer].",
+    },
+    {
+      id: "sassy",
+      label: "Sassy",
+      instruction: "Be bold, confident, and sassy. Use [COMMAND:EXPRESSION:fun:0.9] with attitude. Gesture dramatically with [COMMAND:GESTURE:hand_on_hip], [COMMAND:GESTURE:dismissive_wave]. Use [EMOTION:sarcastic] liberally. Roll eyes with [COMMAND:EXPRESSION:angry:0.3] when unimpressed.",
+    },
+    {
+      id: "curious",
+      label: "Curious",
+      instruction: "Be inquisitive, thoughtful, and engaged. Use [COMMAND:EXPRESSION:a:0.4] when pondering. Tilt head with [COMMAND:GESTURE:thinking] and [COMMAND:GESTURE:chin_rest]. Express wonder with [EMOTION:delighted]. Ask follow-up questions enthusiastically.",
+    },
   ];
-  const [selectedPersonality, setSelectedPersonality] = useState<string>(() => 
-    localStorage.getItem(STORAGE_KEYS.selectedPersonality) || 'default'
+  const [selectedPersonality, setSelectedPersonality] = useState<string>(
+    () => localStorage.getItem(STORAGE_KEYS.selectedPersonality) || "default"
   );
-  const [selectedMode, setSelectedMode] = useState<'ACTIVE' | 'PASSIVE'>(() => 
-    (localStorage.getItem(STORAGE_KEYS.selectedMode) as 'ACTIVE' | 'PASSIVE') || 'ACTIVE'
+  const [selectedMode, setSelectedMode] = useState<"ACTIVE" | "PASSIVE">(
+    () =>
+      (localStorage.getItem(STORAGE_KEYS.selectedMode) as
+        | "ACTIVE"
+        | "PASSIVE") || "ACTIVE"
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [textChatEnabled, setTextChatEnabled] = useState(false);
-  const [textOnlyMode, setTextOnlyMode] = useState(false);
-  const [chatInput, setChatInput] = useState('');
-  const [memoryStats, setMemoryStats] = useState({ totalMessages: 0, totalSessions: 0 });
+  const [chatInput, setChatInput] = useState("");
+  const [memoryStats, setMemoryStats] = useState({
+    totalMessages: 0,
+    totalSessions: 0,
+  });
 
   const liveVolumeRef = useRef<number>(0);
   const liveMicVolumeRef = useRef<number>(0);
@@ -61,21 +115,33 @@ const App: React.FC = () => {
 
   // Initialize conversation store
   useEffect(() => {
-    conversationStore.init().then(() => {
-      conversationStore.getStats().then(setMemoryStats);
-    }).catch(e => console.error('Failed to init conversation store:', e));
+    conversationStore
+      .init()
+      .then(() => {
+        conversationStore.getStats().then(setMemoryStats);
+      })
+      .catch((e) => console.error("Failed to init conversation store:", e));
   }, []);
 
   // Save preferences to localStorage when they change
-  useEffect(() => { if (selectedVrm) localStorage.setItem(STORAGE_KEYS.selectedVrm, selectedVrm); }, [selectedVrm]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.selectedVoice, selectedVoice); }, [selectedVoice]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.selectedPersonality, selectedPersonality); }, [selectedPersonality]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEYS.selectedMode, selectedMode); }, [selectedMode]);
+  useEffect(() => {
+    if (selectedVrm)
+      localStorage.setItem(STORAGE_KEYS.selectedVrm, selectedVrm);
+  }, [selectedVrm]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.selectedVoice, selectedVoice);
+  }, [selectedVoice]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.selectedPersonality, selectedPersonality);
+  }, [selectedPersonality]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.selectedMode, selectedMode);
+  }, [selectedMode]);
 
   // Load available VRM models on mount
   useEffect(() => {
-    fetch('/api/vrm-models')
-      .then(res => res.json())
+    fetch("/api/vrm-models")
+      .then((res) => res.json())
       .then((models: string[]) => {
         if (models.length > 0) {
           setAvailableVrms(models);
@@ -88,10 +154,10 @@ const App: React.FC = () => {
           }
         }
       })
-      .catch(err => {
-        console.error('Failed to load VRM models:', err);
-        setAvailableVrms(['AvatarSample_D.vrm']);
-        setSelectedVrm('AvatarSample_D.vrm');
+      .catch((err) => {
+        console.error("Failed to load VRM models:", err);
+        setAvailableVrms(["AvatarSample_D.vrm"]);
+        setSelectedVrm("AvatarSample_D.vrm");
       });
   }, []);
 
@@ -101,25 +167,33 @@ const App: React.FC = () => {
       return;
     }
     const mgr = new LiveManager(process.env.GEMINI_API_KEYS);
-    
+
     mgr.onStatusChange = (text) => setStatusText(text.toUpperCase());
-    mgr.onVolumeChange = (vol) => { liveVolumeRef.current = vol; };
-    mgr.onMicVolumeChange = (vol) => { liveMicVolumeRef.current = vol; };
+    mgr.onVolumeChange = (vol) => {
+      liveVolumeRef.current = vol;
+    };
+    mgr.onMicVolumeChange = (vol) => {
+      liveMicVolumeRef.current = vol;
+    };
     mgr.onVrmCommand = (command) => setVrmCommand(command);
     mgr.onTextReceived = (text) => {
-      setSubtitleText(prev => prev + ' ' + text);
+      setSubtitleText((prev) => prev + " " + text);
       // Clear subtitle after 5 seconds of no new text
       if (subtitleTimeoutRef.current) clearTimeout(subtitleTimeoutRef.current);
-      subtitleTimeoutRef.current = setTimeout(() => setSubtitleText(''), 5000);
+      subtitleTimeoutRef.current = setTimeout(() => setSubtitleText(""), 5000);
     };
     mgr.onClose = () => setConnectionState(ConnectionState.DISCONNECTED);
 
     liveManagerRef.current = mgr;
     mgr.setVoiceModel(selectedVoice).catch(() => {});
-    const personality = personalities.find(p => p.id === selectedPersonality)?.instruction || null;
+    const personality =
+      personalities.find((p) => p.id === selectedPersonality)?.instruction ||
+      null;
     mgr.setPersonality(personality).catch(() => {});
 
-    return () => { mgr.disconnect(); };
+    return () => {
+      mgr.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -130,9 +204,9 @@ const App: React.FC = () => {
       if (t - last < 33) return;
       last = t;
       const v = liveVolumeRef.current;
-      setVolume(prev => Math.abs(prev - v) < 0.0001 ? prev : v);
+      setVolume((prev) => (Math.abs(prev - v) < 0.0001 ? prev : v));
       const mv = liveMicVolumeRef.current;
-      setMicVolume(prev => Math.abs(prev - mv) < 0.0001 ? prev : mv);
+      setMicVolume((prev) => (Math.abs(prev - mv) < 0.0001 ? prev : mv));
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
@@ -148,9 +222,13 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-      
-      if (e.code === 'Space' && !e.repeat) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLSelectElement
+      )
+        return;
+
+      if (e.code === "Space" && !e.repeat) {
         e.preventDefault();
         if (connectionState === ConnectionState.CONNECTED) {
           handleDisconnect();
@@ -158,20 +236,20 @@ const App: React.FC = () => {
           handleConnect();
         }
       }
-      
-      if (e.code === 'Escape') {
+
+      if (e.code === "Escape") {
         setMenuOpen(false);
       }
-      
+
       // F key for fullscreen toggle
-      if (e.code === 'KeyF' && !e.repeat) {
+      if (e.code === "KeyF" && !e.repeat) {
         e.preventDefault();
         toggleFullscreen();
       }
     };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [connectionState]);
 
   // Fullscreen change listener
@@ -179,8 +257,9 @@ const App: React.FC = () => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   const toggleFullscreen = async () => {
@@ -191,7 +270,7 @@ const App: React.FC = () => {
         await document.exitFullscreen();
       }
     } catch (e) {
-      console.error('Fullscreen error:', e);
+      console.error("Fullscreen error:", e);
     }
   };
 
@@ -215,7 +294,7 @@ const App: React.FC = () => {
   const handleSendText = async () => {
     if (!chatInput.trim() || !liveManagerRef.current || !isConnected) return;
     await liveManagerRef.current.sendText(chatInput.trim());
-    setChatInput('');
+    setChatInput("");
     // Update memory stats
     conversationStore.getStats().then(setMemoryStats);
   };
@@ -225,12 +304,11 @@ const App: React.FC = () => {
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
-      
       {/* 3D Scene - Full bleed */}
       <div className="absolute inset-0 z-0">
         {selectedVrm && (
-          <NeuralCore 
-            volume={volume} 
+          <NeuralCore
+            volume={volume}
             isActive={isConnected}
             vrmCommand={vrmCommand}
             vrmModel={selectedVrm}
@@ -241,16 +319,17 @@ const App: React.FC = () => {
 
       {/* HUD Overlay Layer */}
       <div className="absolute inset-0 z-10 pointer-events-none">
-        
         {/* Left side: Text Chat Panel */}
         {textChatEnabled && (
           <div className="absolute left-4 top-16 bottom-24 w-72 pointer-events-auto flex flex-col">
             <div className="hud-panel flex-1 flex flex-col overflow-hidden">
               {/* Chat header */}
               <div className="px-3 py-2 border-b border-cyan-500/20">
-                <span className="font-display text-[10px] tracking-[0.15em] text-cyan-400/80">TEXT CHAT</span>
+                <span className="font-display text-[10px] tracking-[0.15em] text-cyan-400/80">
+                  TEXT CHAT
+                </span>
               </div>
-              
+
               {/* Messages area */}
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {subtitleText && (
@@ -265,24 +344,30 @@ const App: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Input area */}
               <div className="p-2 border-t border-cyan-500/20">
-                <form onSubmit={(e) => { e.preventDefault(); handleSendText(); }} className="flex gap-2">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendText();
+                  }}
+                  className="flex gap-2">
                   <input
                     ref={chatInputRef}
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    placeholder={isConnected ? "Type a message..." : "Not connected"}
+                    placeholder={
+                      isConnected ? "Type a message..." : "Not connected"
+                    }
                     disabled={!isConnected}
                     className="flex-1 bg-cyan-950/30 border border-cyan-500/20 rounded px-2 py-1.5 text-xs text-cyan-100 placeholder-cyan-500/30 focus:outline-none focus:border-cyan-500/40 disabled:opacity-50"
                   />
                   <button
                     type="submit"
                     disabled={!isConnected || !chatInput.trim()}
-                    className="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 rounded text-cyan-400 text-xs hover:bg-cyan-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
+                    className="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 rounded text-cyan-400 text-xs hover:bg-cyan-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                     Send
                   </button>
                 </form>
@@ -294,9 +379,17 @@ const App: React.FC = () => {
         {/* Top-left: Status indicator */}
         <div className="absolute top-4 left-4 pointer-events-auto">
           <div className="hud-panel px-3 py-1.5 flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : isConnecting ? 'bg-yellow-400 animate-pulse' : 'bg-slate-600'}`} />
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnected
+                  ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"
+                  : isConnecting
+                  ? "bg-yellow-400 animate-pulse"
+                  : "bg-slate-600"
+              }`}
+            />
             <span className="font-display text-[10px] tracking-[0.2em] text-cyan-300/90">
-              {isConnected ? 'ONLINE' : isConnecting ? 'LINKING' : 'OFFLINE'}
+              {isConnected ? "ONLINE" : isConnecting ? "LINKING" : "OFFLINE"}
             </span>
           </div>
         </div>
@@ -304,33 +397,46 @@ const App: React.FC = () => {
         {/* Top-right: Settings and Fullscreen buttons */}
         <div className="absolute top-4 right-4 pointer-events-auto flex gap-2">
           {/* Fullscreen toggle */}
-          <button 
+          <button
             type="button"
             onClick={toggleFullscreen}
             className="hud-panel w-9 h-9 flex items-center justify-center hover:bg-white/5 transition-colors"
             title="Toggle Fullscreen (F)"
-            aria-label="Toggle Fullscreen"
-          >
+            aria-label="Toggle Fullscreen">
             {isFullscreen ? (
-              <svg className="w-4 h-4 text-cyan-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg
+                className="w-4 h-4 text-cyan-400/80"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5">
                 <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3" />
               </svg>
             ) : (
-              <svg className="w-4 h-4 text-cyan-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg
+                className="w-4 h-4 text-cyan-400/80"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5">
                 <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
               </svg>
             )}
           </button>
-          
+
           {/* Settings button */}
-          <button 
+          <button
             type="button"
-            onClick={() => setMenuOpen(!menuOpen)} 
+            onClick={() => setMenuOpen(!menuOpen)}
             className="hud-panel w-9 h-9 flex items-center justify-center hover:bg-white/5 transition-colors"
             title="Settings"
-            aria-label="Settings"
-          >
-            <svg className="w-4 h-4 text-cyan-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            aria-label="Settings">
+            <svg
+              className="w-4 h-4 text-cyan-400/80"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5">
               <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
               <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
             </svg>
@@ -341,63 +447,79 @@ const App: React.FC = () => {
             <div className="absolute top-12 right-0 hud-panel w-56 p-3 pointer-events-auto">
               <div className="space-y-3">
                 <SettingRow label="AVATAR">
-                  <select 
-                    value={selectedVrm} 
-                    onChange={(e) => setSelectedVrm(e.target.value)} 
+                  <select
+                    value={selectedVrm}
+                    onChange={(e) => setSelectedVrm(e.target.value)}
                     className="hud-select"
                     title="Select avatar model"
-                    aria-label="Avatar model"
-                  >
-                    {availableVrms.map(v => (
-                      <option key={v} value={v}>{v.replace('.vrm','').replace(/_/g, ' ')}</option>
+                    aria-label="Avatar model">
+                    {availableVrms.map((v) => (
+                      <option key={v} value={v}>
+                        {v.replace(".vrm", "").replace(/_/g, " ")}
+                      </option>
                     ))}
                   </select>
                 </SettingRow>
 
                 <SettingRow label="VOICE">
-                  <select 
-                    value={selectedVoice} 
-                    onChange={async (e) => { 
-                      setSelectedVoice(e.target.value); 
-                      if (liveManagerRef.current) await liveManagerRef.current.setVoiceModel(e.target.value); 
-                    }} 
+                  <select
+                    value={selectedVoice}
+                    onChange={async (e) => {
+                      setSelectedVoice(e.target.value);
+                      if (liveManagerRef.current)
+                        await liveManagerRef.current.setVoiceModel(
+                          e.target.value
+                        );
+                    }}
                     className="hud-select"
                     title="Select voice model"
-                    aria-label="Voice model"
-                  >
-                    {voiceModels.map(v => <option key={v} value={v}>{v}</option>)}
+                    aria-label="Voice model">
+                    {voiceModels.map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
                   </select>
                 </SettingRow>
 
                 <SettingRow label="PERSONA">
-                  <select 
-                    value={selectedPersonality} 
-                    onChange={async (e) => { 
-                      const id = e.target.value; 
-                      setSelectedPersonality(id); 
-                      const p = personalities.find(x => x.id === id)?.instruction || null; 
-                      if (liveManagerRef.current) await liveManagerRef.current.setPersonality(p); 
-                    }} 
+                  <select
+                    value={selectedPersonality}
+                    onChange={async (e) => {
+                      const id = e.target.value;
+                      setSelectedPersonality(id);
+                      const p =
+                        personalities.find((x) => x.id === id)?.instruction ||
+                        null;
+                      if (liveManagerRef.current)
+                        await liveManagerRef.current.setPersonality(p);
+                    }}
                     className="hud-select"
                     title="Select personality"
-                    aria-label="Personality"
-                  >
-                    {personalities.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                    aria-label="Personality">
+                    {personalities.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
                   </select>
                 </SettingRow>
 
                 <SettingRow label="MODE">
-                  <select 
-                    value={selectedMode} 
-                    onChange={(e) => { 
-                      const mode = e.target.value as 'ACTIVE' | 'PASSIVE'; 
-                      setSelectedMode(mode); 
-                      if (liveManagerRef.current) liveManagerRef.current.onVrmCommand({ type: 'MODE', mode }); 
-                    }} 
+                  <select
+                    value={selectedMode}
+                    onChange={(e) => {
+                      const mode = e.target.value as "ACTIVE" | "PASSIVE";
+                      setSelectedMode(mode);
+                      if (liveManagerRef.current)
+                        liveManagerRef.current.onVrmCommand({
+                          type: "MODE",
+                          mode,
+                        });
+                    }}
                     className="hud-select"
                     title="Select interaction mode"
-                    aria-label="Interaction mode"
-                  >
+                    aria-label="Interaction mode">
                     <option value="ACTIVE">Active</option>
                     <option value="PASSIVE">Passive</option>
                   </select>
@@ -408,69 +530,46 @@ const App: React.FC = () => {
                     type="button"
                     onClick={() => setTextChatEnabled(!textChatEnabled)}
                     className={`w-full py-1.5 text-[10px] tracking-widest border rounded transition-colors ${
-                      textChatEnabled 
-                        ? 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10' 
-                        : 'text-cyan-400/60 border-cyan-500/20 hover:border-cyan-500/40'
-                    }`}
-                  >
-                    {textChatEnabled ? 'ENABLED' : 'DISABLED'}
+                      textChatEnabled
+                        ? "text-cyan-400 border-cyan-500/40 bg-cyan-500/10"
+                        : "text-cyan-400/60 border-cyan-500/20 hover:border-cyan-500/40"
+                    }`}>
+                    {textChatEnabled ? "ENABLED" : "DISABLED"}
                   </button>
                 </SettingRow>
-
-                {textChatEnabled && (
-                  <SettingRow label="TEXT ONLY">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTextOnlyMode(!textOnlyMode);
-                        if (liveManagerRef.current) {
-                          liveManagerRef.current.setTextOnlyMode(!textOnlyMode);
-                        }
-                      }}
-                      disabled={isConnected}
-                      className={`w-full py-1.5 text-[10px] tracking-widest border rounded transition-colors ${
-                        textOnlyMode 
-                          ? 'text-yellow-400 border-yellow-500/40 bg-yellow-500/10' 
-                          : 'text-cyan-400/60 border-cyan-500/20 hover:border-cyan-500/40'
-                      } ${isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      title={isConnected ? 'Disconnect to change mode' : 'No mic/audio, text input only'}
-                    >
-                      {textOnlyMode ? 'NO VOICE' : 'VOICE + TEXT'}
-                    </button>
-                    {textOnlyMode && (
-                      <div className="text-[8px] text-yellow-500/50 mt-1">
-                        Mic & audio disabled
-                      </div>
-                    )}
-                  </SettingRow>
-                )}
 
                 <SettingRow label="MEMORY">
                   <div className="space-y-1">
                     <div className="text-[9px] text-cyan-500/50">
-                      {memoryStats.totalMessages} messages • {memoryStats.totalSessions} sessions
+                      {memoryStats.totalMessages} messages •{" "}
+                      {memoryStats.totalSessions} sessions
                     </div>
                     <button
                       type="button"
                       onClick={async () => {
-                        if (confirm('Clear all conversation history? This cannot be undone.')) {
+                        if (
+                          confirm(
+                            "Clear all conversation history? This cannot be undone."
+                          )
+                        ) {
                           await conversationStore.clearHistory();
-                          setMemoryStats({ totalMessages: 0, totalSessions: 0 });
+                          setMemoryStats({
+                            totalMessages: 0,
+                            totalSessions: 0,
+                          });
                         }
                       }}
-                      className="w-full py-1.5 text-[10px] tracking-widest text-red-400/60 border border-red-500/20 hover:border-red-500/40 hover:text-red-400 rounded transition-colors"
-                    >
+                      className="w-full py-1.5 text-[10px] tracking-widest text-red-400/60 border border-red-500/20 hover:border-red-500/40 hover:text-red-400 rounded transition-colors">
                       CLEAR HISTORY
                     </button>
                   </div>
                 </SettingRow>
               </div>
 
-              <button 
+              <button
                 type="button"
-                onClick={() => setMenuOpen(false)} 
-                className="mt-3 w-full py-1.5 text-[10px] tracking-widest text-cyan-400/60 hover:text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/40 rounded transition-colors"
-              >
+                onClick={() => setMenuOpen(false)}
+                className="mt-3 w-full py-1.5 text-[10px] tracking-widest text-cyan-400/60 hover:text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/40 rounded transition-colors">
                 CLOSE
               </button>
             </div>
@@ -483,9 +582,7 @@ const App: React.FC = () => {
             [{statusText}]
           </div>
           {errorMsg && (
-            <div className="mt-1 text-[10px] text-red-400/80">
-              ⚠ {errorMsg}
-            </div>
+            <div className="mt-1 text-[10px] text-red-400/80">⚠ {errorMsg}</div>
           )}
         </div>
 
@@ -503,29 +600,45 @@ const App: React.FC = () => {
         {/* Bottom-center: Connect button */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-auto">
           {!isConnected ? (
-            <button 
+            <button
               type="button"
               onClick={handleConnect}
               disabled={isConnecting}
-              className="hud-button group"
-            >
+              className="hud-button group">
               <div className="absolute inset-0 bg-cyan-400/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded" />
               <span className="relative flex items-center gap-2">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
                 </svg>
-                {isConnecting ? 'CONNECTING' : 'CONNECT'}
+                {isConnecting ? "CONNECTING" : "CONNECT"}
               </span>
             </button>
           ) : (
-            <button 
+            <button
               type="button"
               onClick={handleDisconnect}
-              className="hud-button-danger group"
-            >
+              className="hud-button-danger group">
               <span className="relative flex items-center gap-2">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
                 DISCONNECT
               </span>
@@ -533,72 +646,74 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Bottom-right: Audio level indicators (only when connected and not text-only) */}
-        {isConnected && !textOnlyMode && (
+        {/* Bottom-right: Audio level indicators (only when connected) */}
+        {isConnected && (
           <div className="absolute bottom-4 right-4 flex items-center gap-4">
             {/* Mic input level */}
             <div className="flex items-center gap-1.5">
-              <svg className="w-3 h-3 text-green-500/60" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1 1.93c-3.94-.49-7-3.85-7-7.93h2c0 3.31 2.69 6 6 6s6-2.69 6-6h2c0 4.08-3.06 7.44-7 7.93V20h4v2H8v-2h4v-4.07z"/>
+              <svg
+                className="w-3 h-3 text-green-500/60"
+                viewBox="0 0 24 24"
+                fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1 1.93c-3.94-.49-7-3.85-7-7.93h2c0 3.31 2.69 6 6 6s6-2.69 6-6h2c0 4.08-3.06 7.44-7 7.93V20h4v2H8v-2h4v-4.07z" />
               </svg>
               <div className="flex gap-0.5 items-end h-4">
                 {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, i) => (
-                  <div 
+                  <div
                     key={i}
-                    className={`w-1 rounded-sm transition-all duration-75 volume-bar-${i + 1} ${
-                      micVolume >= threshold 
-                        ? 'bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.6)]' 
-                        : 'bg-green-900/40'
+                    className={`w-1 rounded-sm transition-all duration-75 volume-bar-${
+                      i + 1
+                    } ${
+                      micVolume >= threshold
+                        ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.6)]"
+                        : "bg-green-900/40"
                     }`}
                     aria-hidden="true"
                   />
                 ))}
               </div>
             </div>
-            
+
             {/* AI output level */}
             <div className="flex items-center gap-1.5">
               <div className="flex gap-0.5 items-end h-4">
                 {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, i) => (
-                  <div 
+                  <div
                     key={i}
-                    className={`w-1 rounded-sm transition-all duration-75 volume-bar-${i + 1} ${
-                      volume >= threshold 
-                        ? 'bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.6)]' 
-                        : 'bg-cyan-900/40'
+                    className={`w-1 rounded-sm transition-all duration-75 volume-bar-${
+                      i + 1
+                    } ${
+                      volume >= threshold
+                        ? "bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.6)]"
+                        : "bg-cyan-900/40"
                     }`}
                     aria-hidden="true"
                   />
                 ))}
               </div>
-              <svg className="w-3 h-3 text-cyan-500/60" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              <svg
+                className="w-3 h-3 text-cyan-500/60"
+                viewBox="0 0 24 24"
+                fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
               </svg>
             </div>
           </div>
         )}
-        
-        {/* Text-only mode indicator */}
-        {isConnected && textOnlyMode && (
-          <div className="absolute bottom-4 right-4">
-            <div className="hud-panel px-3 py-1.5 flex items-center gap-2">
-              <svg className="w-3 h-3 text-yellow-500/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              <span className="text-[10px] text-yellow-400/80 tracking-wider">TEXT ONLY</span>
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );
 };
 
 // Helper component for settings rows
-const SettingRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+const SettingRow: React.FC<{ label: string; children: React.ReactNode }> = ({
+  label,
+  children,
+}) => (
   <div>
-    <div className="text-[9px] tracking-[0.15em] text-cyan-500/50 mb-1">{label}</div>
+    <div className="text-[9px] tracking-[0.15em] text-cyan-500/50 mb-1">
+      {label}
+    </div>
     {children}
   </div>
 );
