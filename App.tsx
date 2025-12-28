@@ -126,7 +126,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-screen bg-black overflow-hidden items-center justify-between">
+    <div className="flex flex-col w-full h-screen bg-black overflow-hidden relative">
       
       {/* Background Grid Effect */}
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
@@ -134,6 +134,13 @@ const App: React.FC = () => {
              backgroundImage: 'linear-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.1) 1px, transparent 1px)',
              backgroundSize: '40px 40px'
            }}>
+      </div>
+
+      {/* Top-left Connection Status */}
+      <div className="absolute top-4 left-4 z-30">
+          <h1 className={`font-display text-xl md:text-2xl tracking-widest uppercase font-bold transition-all duration-300 ${getStatusColor()}`}>
+              {connectionState === ConnectionState.CONNECTED ? "AURA ONLINE" : "NEURAL LINK OFFLINE"}
+          </h1>
       </div>
 
       {/* Main 3D Container */}
@@ -194,33 +201,35 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* UI Overlay */}
-      <div className="relative w-full z-20 p-4 flex flex-col items-center gap-2 bg-gradient-to-t from-black via-black/80 to-transparent justify-end">
-        
-        {/* Status Display */}
-        <div className="flex flex-col items-center gap-2">
-            <h1 className={`font-display text-2xl md:text-4xl tracking-widest uppercase font-bold transition-all duration-300 ${getStatusColor()}`}>
-                {connectionState === ConnectionState.CONNECTED ? "AURA ONLINE" : "NEURAL LINK OFFLINE"}
-            </h1>
-            <p className="font-mono text-sm text-cyan-200/70 tracking-wider">
+      {/* Bottom UI section */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-4 flex justify-between items-end">
+        {/* Bottom-left informational text */}
+        <div className="flex flex-col items-start text-left font-mono text-xs text-slate-500 max-w-md">
+            <p className="text-cyan-200/70 tracking-wider text-sm">
                 [{statusText}]
             </p>
+
+            {errorMsg && (
+                <p className="bg-red-900/50 border border-red-500 text-red-200 px-2 py-1 rounded mt-1">
+                    ERROR: {errorMsg}
+                </p>
+            )}
+
+            {connectionState !== ConnectionState.CONNECTED && (
+              <div className="mt-2">
+                <p>Allow microphone access to interface with the system.</p>
+                <p>Voice data is processed in real-time by Gemini 2.5 Flash.</p>
+              </div>
+            )}
         </div>
 
-        {/* Error Message */}
-        {errorMsg && (
-            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded font-mono text-xs">
-                ERROR: {errorMsg}
-            </div>
-        )}
-
-        {/* Controls */}
-        <div className="flex gap-6 mb-8">
+        {/* Bottom-right Controls */}
+        <div className="flex gap-6">
             {connectionState !== ConnectionState.CONNECTED ? (
                 <button 
                     onClick={handleConnect}
                     disabled={connectionState === ConnectionState.CONNECTING}
-                    className="group relative px-8 py-4 bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/30 rounded-full transition-all duration-300 backdrop-blur-md overflow-hidden"
+                    className="group relative px-8 py-3 bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/30 rounded-full transition-all duration-300 backdrop-blur-md overflow-hidden"
                 >
                     <div className="absolute inset-0 bg-cyan-400/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                     <span className="relative font-display font-bold text-cyan-400 tracking-wider flex items-center gap-3">
@@ -231,7 +240,7 @@ const App: React.FC = () => {
             ) : (
                 <button 
                     onClick={handleDisconnect}
-                    className="group px-8 py-4 bg-red-950/30 hover:bg-red-900/50 border border-red-500/30 rounded-full transition-all duration-300 backdrop-blur-md"
+                    className="group px-8 py-3 bg-red-950/30 hover:bg-red-900/50 border border-red-500/30 rounded-full transition-all duration-300 backdrop-blur-md"
                 >
                     <span className="font-display font-bold text-red-400 tracking-wider flex items-center gap-3">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -240,14 +249,7 @@ const App: React.FC = () => {
                 </button>
             )}
         </div>
-
-        {/* Instructions */}
-        <div className="text-center text-slate-500 text-xs font-mono max-w-md">
-            <p>Allow microphone access to interface with the system.</p>
-            <p>Voice data is processed in real-time by Gemini 2.5 Flash.</p>
-        </div>
-
-        </div>
+      </div>
     </div>
   );
 };
