@@ -1,24 +1,150 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 body {
-    font-family: 'Rajdhani', sans-serif;
-    background-color: #050505;
-    color: #e0f2fe;
-    overflow: hidden; /* Prevent scroll */
+  font-family: 'Rajdhani', sans-serif;
+  background-color: #000;
+  color: #e0f2fe;
+  overflow: hidden;
 }
+
 .font-display {
-    font-family: 'Orbitron', sans-serif;
+  font-family: 'Orbitron', sans-serif;
 }
-/* Custom scrollbar for logs */
+
+.font-mono {
+  font-family: 'Rajdhani', monospace;
+}
+
+/* HUD Panel - Glassmorphism base */
+.hud-panel {
+  background: rgba(0, 10, 20, 0.6);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(34, 211, 238, 0.15);
+  border-radius: 4px;
+  box-shadow: 
+    0 0 20px rgba(0, 0, 0, 0.5),
+    inset 0 0 20px rgba(34, 211, 238, 0.03);
+}
+
+/* HUD Select inputs */
+.hud-select {
+  width: 100%;
+  background: rgba(0, 20, 30, 0.5);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: rgba(165, 243, 252, 0.9);
+  font-family: 'Rajdhani', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(34,211,238,0.5)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.hud-select:hover {
+  border-color: rgba(34, 211, 238, 0.4);
+  background-color: rgba(0, 30, 40, 0.6);
+}
+
+.hud-select:focus {
+  outline: none;
+  border-color: rgba(34, 211, 238, 0.5);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);
+}
+
+.hud-select option {
+  background: #0a1520;
+  color: #a5f3fc;
+  padding: 8px;
+}
+
+/* HUD Buttons */
+.hud-button {
+  position: relative;
+  padding: 10px 24px;
+  background: rgba(0, 40, 60, 0.4);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 4px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  color: rgba(34, 211, 238, 0.9);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.hud-button:hover {
+  border-color: rgba(34, 211, 238, 0.6);
+  box-shadow: 
+    0 0 20px rgba(34, 211, 238, 0.2),
+    inset 0 0 20px rgba(34, 211, 238, 0.05);
+}
+
+.hud-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hud-button-danger {
+  position: relative;
+  padding: 10px 24px;
+  background: rgba(60, 20, 20, 0.4);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 4px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  color: rgba(248, 113, 113, 0.9);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.hud-button-danger:hover {
+  border-color: rgba(248, 113, 113, 0.6);
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.2);
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-    width: 6px;
+  width: 4px;
 }
+
 ::-webkit-scrollbar-track {
-    background: #0f172a; 
+  background: rgba(0, 20, 30, 0.5);
 }
+
 ::-webkit-scrollbar-thumb {
-    background: #38bdf8; 
-    border-radius: 3px;
+  background: rgba(34, 211, 238, 0.3);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.5);
+}
+
+/* Subtle scan line effect (optional, very subtle) */
+.hud-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(34, 211, 238, 0.01) 2px,
+    rgba(34, 211, 238, 0.01) 4px
+  );
+  pointer-events: none;
+  border-radius: inherit;
 }

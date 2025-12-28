@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ConnectionState } from './types';
 import { LiveManager, VrmCommand } from './services/liveManager';
@@ -6,7 +5,7 @@ import { NeuralCore } from './components/NeuralCore';
 
 const App: React.FC = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
-  const [statusText, setStatusText] = useState("System Standby");
+  const [statusText, setStatusText] = useState("STANDBY");
   const [volume, setVolume] = useState(0);
   const [vrmCommand, setVrmCommand] = useState<VrmCommand | null>(null);
   const [vrmExpressions, setVrmExpressions] = useState<string[]>([]);
@@ -29,66 +28,49 @@ const App: React.FC = () => {
   const [selectedVoice, setSelectedVoice] = useState<string>(voiceModels[0]);
 
   const personalities = [
-    { id: 'default', label: 'Default Aura', instruction: null },
-    { id: 'witty', label: 'Witty Assistant', instruction: "You are Aura: witty, playful, concise." },
-    { id: 'calm', label: 'Calm Guide', instruction: "You are Aura: calm, measured, empathetic." }
+    { id: 'default', label: 'Default', instruction: null },
+    { id: 'witty', label: 'Witty', instruction: "You are Aura: witty, playful, concise." },
+    { id: 'calm', label: 'Calm', instruction: "You are Aura: calm, measured, empathetic." }
   ];
   const [selectedPersonality, setSelectedPersonality] = useState<string>('default');
   const [selectedMode, setSelectedMode] = useState<'ACTIVE' | 'PASSIVE'>('ACTIVE');
-  // Debug command panel (dev-only)
-  const [debugCmdText, setDebugCmdText] = useState<string>('');
 
-  // Local ref used by the LiveManager hook above (attached at runtime) to reduce setState frequency
   const liveVolumeRef = useRef<number>(0);
 
-  // Initialize LiveManager on mount (but don't connect yet)
   useEffect(() => {
     if (!process.env.GEMINI_API_KEYS) {
-      setErrorMsg("GEMINI_API_KEYS environment variable missing.");
+      setErrorMsg("API KEY MISSING");
       return;
     }
     const mgr = new LiveManager(process.env.GEMINI_API_KEYS);
     
-    mgr.onStatusChange = (text) => setStatusText(text);
-    // Throttle volume updates: assign into a ref to avoid per-frame React state churn
-    mgr.onVolumeChange = (vol) => {
-      liveVolumeRef.current = vol;
-    };
+    mgr.onStatusChange = (text) => setStatusText(text.toUpperCase());
+    mgr.onVolumeChange = (vol) => { liveVolumeRef.current = vol; };
     mgr.onVrmCommand = (command) => setVrmCommand(command);
     mgr.onClose = () => setConnectionState(ConnectionState.DISCONNECTED);
 
     liveManagerRef.current = mgr;
-
-    // apply initial selected voice/personality if set
     mgr.setVoiceModel(selectedVoice).catch(() => {});
     const personality = personalities.find(p => p.id === selectedPersonality)?.instruction || null;
     mgr.setPersonality(personality).catch(() => {});
 
-    return () => {
-      mgr.disconnect();
-    };
+    return () => { mgr.disconnect(); };
   }, []);
 
-  // Throttled updater: copy liveVolumeRef to state at ~30Hz to keep React updates reasonable
   useEffect(() => {
     let raf = 0;
     let last = 0;
     const tick = (t: number) => {
       raf = requestAnimationFrame(tick);
-      if (t - last < 33) return; // ~30 FPS
+      if (t - last < 33) return;
       last = t;
       const v = liveVolumeRef.current;
-      setVolume(prev => {
-        // small check to avoid unnecessary updates
-        if (Math.abs(prev - v) < 0.0001) return prev;
-        return v;
-      });
+      setVolume(prev => Math.abs(prev - v) < 0.0001 ? prev : v);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // When VRM expressions are loaded, update LiveManager
   useEffect(() => {
     if (liveManagerRef.current) {
       liveManagerRef.current.setVrmExpressions(vrmExpressions);
@@ -97,7 +79,6 @@ const App: React.FC = () => {
 
   const handleConnect = async () => {
     if (!liveManagerRef.current) return;
-    
     setConnectionState(ConnectionState.CONNECTING);
     try {
       await liveManagerRef.current.connect();
@@ -105,153 +86,211 @@ const App: React.FC = () => {
     } catch (e) {
       console.error(e);
       setConnectionState(ConnectionState.ERROR);
-      setErrorMsg("Failed to establish neural link.");
+      setErrorMsg("CONNECTION FAILED");
     }
   };
 
   const handleDisconnect = () => {
-    if (liveManagerRef.current) {
-      liveManagerRef.current.disconnect();
-    }
+    if (liveManagerRef.current) liveManagerRef.current.disconnect();
   };
 
-  // UI Helper for status color
-  const getStatusColor = () => {
-    switch (connectionState) {
-      case ConnectionState.CONNECTED: return "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]";
-      case ConnectionState.CONNECTING: return "text-yellow-400 animate-pulse";
-      case ConnectionState.ERROR: return "text-red-500";
-      default: return "text-slate-500";
-    }
-  };
+  const isConnected = connectionState === ConnectionState.CONNECTED;
+  const isConnecting = connectionState === ConnectionState.CONNECTING;
 
   return (
-    <div className="flex flex-col w-full h-screen bg-black overflow-hidden relative">
+    <div className="relative w-full h-screen bg-black overflow-hidden">
       
-      {/* Background Grid Effect */}
-      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
-           style={{ 
-             backgroundImage: 'linear-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.1) 1px, transparent 1px)',
-             backgroundSize: '40px 40px'
-           }}>
-      </div>
-
-      {/* Top-left Connection Status */}
-      <div className="absolute top-4 left-4 z-30">
-          <h1 className={`font-display text-xl md:text-2xl tracking-widest uppercase font-bold transition-all duration-300 ${getStatusColor()}`}>
-              {connectionState === ConnectionState.CONNECTED ? "AURA ONLINE" : "NEURAL LINK OFFLINE"}
-          </h1>
-      </div>
-
-      {/* Main 3D Container */}
-      <div className="relative z-10 w-full flex-grow flex items-center justify-center">
+      {/* 3D Scene - Full bleed */}
+      <div className="absolute inset-0 z-0">
         <NeuralCore 
           volume={volume} 
-          isActive={connectionState === ConnectionState.CONNECTED}
+          isActive={isConnected}
           vrmCommand={vrmCommand}
           vrmModel={selectedVrm}
           onVrmExpressionsLoaded={setVrmExpressions}
         />
       </div>
 
-      {/* Top-right burger menu */}
-      <div className="absolute top-4 right-4 z-30">
-        <div className="relative">
-          <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 bg-black/60 border border-cyan-600 rounded-lg text-cyan-300">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+      {/* HUD Overlay Layer */}
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        
+        {/* Top-left: Status indicator */}
+        <div className="absolute top-4 left-4 pointer-events-auto">
+          <div className="hud-panel px-3 py-1.5 flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : isConnecting ? 'bg-yellow-400 animate-pulse' : 'bg-slate-600'}`} />
+            <span className="font-display text-[10px] tracking-[0.2em] text-cyan-300/90">
+              {isConnected ? 'ONLINE' : isConnecting ? 'LINKING' : 'OFFLINE'}
+            </span>
+          </div>
+        </div>
+
+        {/* Top-right: Settings button */}
+        <div className="absolute top-4 right-4 pointer-events-auto">
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)} 
+            className="hud-panel w-9 h-9 flex items-center justify-center hover:bg-white/5 transition-colors"
+            title="Settings"
+            aria-label="Settings"
+          >
+            <svg className="w-4 h-4 text-cyan-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
           </button>
 
+          {/* Settings Panel */}
           {menuOpen && (
-            <div className="mt-2 w-72 bg-black/80 border border-cyan-800 rounded-lg p-4 text-sm text-cyan-100">
-              <div className="mb-3">
-                <div className="text-xs text-slate-400 mb-1">Avatar Model</div>
-                <select value={selectedVrm} onChange={(e) => setSelectedVrm(e.target.value)} className="w-full bg-transparent border border-slate-800 rounded px-2 py-1">
-                  {availableVrms.map(v => <option key={v} value={v}>{v.replace('.vrm','')}</option>)}
-                </select>
+            <div className="absolute top-12 right-0 hud-panel w-56 p-3 pointer-events-auto">
+              <div className="space-y-3">
+                <SettingRow label="AVATAR">
+                  <select 
+                    value={selectedVrm} 
+                    onChange={(e) => setSelectedVrm(e.target.value)} 
+                    className="hud-select"
+                    title="Select avatar model"
+                    aria-label="Avatar model"
+                  >
+                    {availableVrms.map(v => (
+                      <option key={v} value={v}>{v.replace('.vrm','').replace(/_/g, ' ')}</option>
+                    ))}
+                  </select>
+                </SettingRow>
+
+                <SettingRow label="VOICE">
+                  <select 
+                    value={selectedVoice} 
+                    onChange={async (e) => { 
+                      setSelectedVoice(e.target.value); 
+                      if (liveManagerRef.current) await liveManagerRef.current.setVoiceModel(e.target.value); 
+                    }} 
+                    className="hud-select"
+                    title="Select voice model"
+                    aria-label="Voice model"
+                  >
+                    {voiceModels.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </SettingRow>
+
+                <SettingRow label="PERSONA">
+                  <select 
+                    value={selectedPersonality} 
+                    onChange={async (e) => { 
+                      const id = e.target.value; 
+                      setSelectedPersonality(id); 
+                      const p = personalities.find(x => x.id === id)?.instruction || null; 
+                      if (liveManagerRef.current) await liveManagerRef.current.setPersonality(p); 
+                    }} 
+                    className="hud-select"
+                    title="Select personality"
+                    aria-label="Personality"
+                  >
+                    {personalities.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                  </select>
+                </SettingRow>
+
+                <SettingRow label="MODE">
+                  <select 
+                    value={selectedMode} 
+                    onChange={(e) => { 
+                      const mode = e.target.value as 'ACTIVE' | 'PASSIVE'; 
+                      setSelectedMode(mode); 
+                      if (liveManagerRef.current) liveManagerRef.current.onVrmCommand({ type: 'MODE', mode }); 
+                    }} 
+                    className="hud-select"
+                    title="Select interaction mode"
+                    aria-label="Interaction mode"
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="PASSIVE">Passive</option>
+                  </select>
+                </SettingRow>
               </div>
 
-              <div className="mb-3">
-                <div className="text-xs text-slate-400 mb-1">Voice Model</div>
-                <select value={selectedVoice} onChange={async (e) => { setSelectedVoice(e.target.value); if (liveManagerRef.current) await liveManagerRef.current.setVoiceModel(e.target.value); }} className="w-full bg-transparent border border-slate-800 rounded px-2 py-1">
-                  {voiceModels.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-
-              <div className="mb-2">
-                <div className="text-xs text-slate-400 mb-1">Personality</div>
-                <select value={selectedPersonality} onChange={async (e) => { const id = e.target.value; setSelectedPersonality(id); const p = personalities.find(x=>x.id===id)?.instruction || null; if (liveManagerRef.current) await liveManagerRef.current.setPersonality(p); }} className="w-full bg-transparent border border-slate-800 rounded px-2 py-1">
-                  {personalities.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                </select>
-              </div>
-
-              <div className="mb-2">
-                <div className="text-xs text-slate-400 mb-1">Interaction Mode</div>
-                <select value={selectedMode} onChange={(e) => { const mode = e.target.value as 'ACTIVE' | 'PASSIVE'; setSelectedMode(mode); if (liveManagerRef.current) liveManagerRef.current.onVrmCommand({ type: 'MODE', mode }); }} className="w-full bg-transparent border border-slate-800 rounded px-2 py-1">
-                  <option value="ACTIVE">ACTIVE (Engaged)</option>
-                  <option value="PASSIVE">PASSIVE (Observant)</option>
-                </select>
-              </div>
-
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => { setMenuOpen(false); }} className="flex-1 px-3 py-2 bg-cyan-700/20 border border-cyan-600 rounded">Close</button>
-                <button onClick={() => { setMenuOpen(false); }} className="flex-1 px-3 py-2 bg-cyan-500 text-black rounded">Apply</button>
-              </div>
+              <button 
+                onClick={() => setMenuOpen(false)} 
+                className="mt-3 w-full py-1.5 text-[10px] tracking-widest text-cyan-400/60 hover:text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/40 rounded transition-colors"
+              >
+                CLOSE
+              </button>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Bottom UI section */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-4 flex justify-between items-end">
-        {/* Bottom-left informational text */}
-        <div className="flex flex-col items-start text-left font-mono text-xs text-slate-500 max-w-md">
-            <p className="text-cyan-200/70 tracking-wider text-sm">
-                [{statusText}]
-            </p>
-
-            {errorMsg && (
-                <p className="bg-red-900/50 border border-red-500 text-red-200 px-2 py-1 rounded mt-1">
-                    ERROR: {errorMsg}
-                </p>
-            )}
-
-            {connectionState !== ConnectionState.CONNECTED && (
-              <div className="mt-2">
-                <p>Allow microphone access to interface with the system.</p>
-                <p>Voice data is processed in real-time by Gemini 2.5 Flash.</p>
-              </div>
-            )}
+        {/* Bottom-left: Status text */}
+        <div className="absolute bottom-4 left-4">
+          <div className="font-mono text-[10px] tracking-wider text-cyan-500/50">
+            [{statusText}]
+          </div>
+          {errorMsg && (
+            <div className="mt-1 text-[10px] text-red-400/80">
+              ⚠ {errorMsg}
+            </div>
+          )}
         </div>
 
-        {/* Bottom-right Controls */}
-        <div className="flex gap-6">
-            {connectionState !== ConnectionState.CONNECTED ? (
-                <button 
-                    onClick={handleConnect}
-                    disabled={connectionState === ConnectionState.CONNECTING}
-                    className="group relative px-8 py-3 bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/30 rounded-full transition-all duration-300 backdrop-blur-md overflow-hidden"
-                >
-                    <div className="absolute inset-0 bg-cyan-400/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                    <span className="relative font-display font-bold text-cyan-400 tracking-wider flex items-center gap-3">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        INITIALIZE LINK
-                    </span>
-                </button>
-            ) : (
-                <button 
-                    onClick={handleDisconnect}
-                    className="group px-8 py-3 bg-red-950/30 hover:bg-red-900/50 border border-red-500/30 rounded-full transition-all duration-300 backdrop-blur-md"
-                >
-                    <span className="font-display font-bold text-red-400 tracking-wider flex items-center gap-3">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        TERMINATE
-                    </span>
-                </button>
-            )}
+        {/* Bottom-center: Connect button */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-auto">
+          {!isConnected ? (
+            <button 
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className="hud-button group"
+            >
+              <div className="absolute inset-0 bg-cyan-400/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded" />
+              <span className="relative flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {isConnecting ? 'CONNECTING' : 'CONNECT'}
+              </span>
+            </button>
+          ) : (
+            <button 
+              onClick={handleDisconnect}
+              className="hud-button-danger group"
+            >
+              <span className="relative flex items-center gap-2">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                DISCONNECT
+              </span>
+            </button>
+          )}
         </div>
+
+        {/* Bottom-right: Audio level indicator (only when connected) */}
+        {isConnected && (
+          <div className="absolute bottom-4 right-4 flex items-center gap-1.5">
+            <div className="flex gap-0.5 items-end h-4">
+              {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, i) => (
+                <div 
+                  key={i}
+                  className={`w-1 rounded-sm transition-all duration-75 ${
+                    volume >= threshold 
+                      ? 'bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.6)]' 
+                      : 'bg-cyan-900/40'
+                  }`}
+                  style={{ height: `${(i + 1) * 3 + 4}px` }}
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
+            <span className="font-mono text-[9px] text-cyan-500/40 tracking-wider">VOL</span>
+          </div>
+        )}
+
       </div>
     </div>
   );
 };
+
+// Helper component for settings rows
+const SettingRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div>
+    <div className="text-[9px] tracking-[0.15em] text-cyan-500/50 mb-1">{label}</div>
+    {children}
+  </div>
+);
 
 export default App;
