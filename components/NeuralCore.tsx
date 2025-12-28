@@ -13,6 +13,7 @@ import type {
   ModelBehaviors,
   GestureDefinition, 
   ReactionDefinition,
+  ReactionStep,
   IdleConfig,
   LipSyncConfig,
   TransformConfig 
@@ -243,16 +244,16 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
       return;
     }
 
-    // Trigger all coordinated responses
+    // Trigger all coordinated responses (legacy support)
     emotion.expressions.forEach(expr => {
       setExpressionValue(expr.name, expr.value);
     });
     
     updatePosture(emotion.posture);
     
-    // Perform primary gesture
+    // Perform primary gesture (legacy support)
     if (emotion.gestures.length > 0) {
-      emotion.gestures.forEach(gest => playGesture(gest, emotion.duration || 1.5));
+      emotion.gestures.forEach(gest => playGestureByName(gest, emotion.duration || 1.5));
     }
     
     // Update look direction if specified
@@ -266,7 +267,155 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     
     // Switch interaction mode
     setAiMode(emotion.mode);
+    
+    // Execute reaction steps chain if present
+    if (emotion.steps && emotion.steps.length > 0) {
+      executeReactionStepsChain(emotion.steps);
+    }
   }, [getReaction]);
+
+  // Helper to play gesture by name (used before playGesture is defined)
+  const playGestureByName = (gestureName: string, duration: number = 1.5) => {
+    const rotations = getGestureRotations(gestureName);
+    if (!rotations || !vrmRef.current) {
+      console.warn('Gesture not found or disabled:', gestureName);
+      return;
+    }
+    
+    const gesture = gesturesMapRef.current.get(gestureName);
+    const actualDuration = gesture?.duration ?? duration;
+    gestureQueue.current.push({ name: gestureName, duration: actualDuration });
+    
+    if (!gestureStateRef.current.active) {
+      // Trigger next gesture processing
+      const { name, duration: dur } = gestureQueue.current.shift()!;
+      const rots = getGestureRotations(name);
+      if (rots) {
+        for (const [boneName, rot] of Object.entries(rots)) {
+          boneTargets.current[boneName] = rot;
+        }
+        gestureStateRef.current = { active: true, elapsed: 0, duration: dur, currentGesture: name };
+      }
+    }
+  };
+
+  // Execute a chain of reaction steps with delays
+  const executeReactionStepsChain = (steps: ReactionStep[]) => {
+    const degToRad = (deg: number) => (deg * Math.PI) / 180;
+    
+    steps.forEach((step, index) => {
+      // Calculate cumulative delay
+      let cumulativeDelay = 0;
+      for (let i = 0; i <= index; i++) {
+        cumulativeDelay += (steps[i].delay || 0) * 1000;
+        if (i < index) {
+          cumulativeDelay += (steps[i].duration || 1) * 1000;
+        }
+      }
+      
+      setTimeout(() => {
+        switch (step.type) {
+          case 'body':
+            if (step.bodyConfig) {
+              const bc = step.bodyConfig;
+              if (bc.leftUpperArm) {
+                boneTargets.current.leftUpperArm = {
+                  x: degToRad(bc.leftUpperArm.x),
+                  y: degToRad(bc.leftUpperArm.y),
+                  z: degToRad(bc.leftUpperArm.z),
+                };
+              }
+              if (bc.rightUpperArm) {
+                boneTargets.current.rightUpperArm = {
+                  x: degToRad(bc.rightUpperArm.x),
+                  y: degToRad(bc.rightUpperArm.y),
+                  z: degToRad(bc.rightUpperArm.z),
+                };
+              }
+              if (bc.spine) {
+                boneTargets.current.spine = {
+                  x: degToRad(bc.spine.x),
+                  y: degToRad(bc.spine.y),
+                  z: degToRad(bc.spine.z),
+                };
+              }
+              if (bc.chest) {
+                boneTargets.current.chest = {
+                  x: degToRad(bc.chest.x),
+                  y: degToRad(bc.chest.y),
+                  z: degToRad(bc.chest.z),
+                };
+              }
+            }
+            break;
+            
+          case 'hands':
+            if (step.handsConfig) {
+              const hc = step.handsConfig;
+              const fingerBones = [
+                'leftThumbProximal', 'leftThumbDistal',
+                'leftIndexProximal', 'leftIndexIntermediate', 'leftIndexDistal',
+                'leftMiddleProximal', 'leftMiddleIntermediate', 'leftMiddleDistal',
+                'leftRingProximal', 'leftRingIntermediate', 'leftRingDistal',
+                'leftLittleProximal', 'leftLittleIntermediate', 'leftLittleDistal',
+                'rightThumbProximal', 'rightThumbDistal',
+                'rightIndexProximal', 'rightIndexIntermediate', 'rightIndexDistal',
+                'rightMiddleProximal', 'rightMiddleIntermediate', 'rightMiddleDistal',
+                'rightRingProximal', 'rightRingIntermediate', 'rightRingDistal',
+                'rightLittleProximal', 'rightLittleIntermediate', 'rightLittleDistal',
+              ] as const;
+              
+              for (const boneName of fingerBones) {
+                const boneConfig = (hc as any)[boneName];
+                if (boneConfig) {
+                  boneTargets.current[boneName] = {
+                    x: degToRad(boneConfig.x),
+                    y: degToRad(boneConfig.y),
+                    z: degToRad(boneConfig.z),
+                  };
+                }
+              }
+            }
+            break;
+            
+          case 'facial':
+            if (step.facialConfig) {
+              const fc = step.facialConfig;
+              if (fc.expressions) {
+                for (const [expr, value] of Object.entries(fc.expressions)) {
+                  addExpressionTarget(expr, value);
+                }
+              }
+              if (fc.mouth) {
+                for (const [viseme, value] of Object.entries(fc.mouth)) {
+                  addExpressionTarget(viseme, value);
+                }
+              }
+              if (fc.eyes) {
+                for (const [eye, value] of Object.entries(fc.eyes)) {
+                  addExpressionTarget(eye, value);
+                }
+              }
+            }
+            break;
+            
+          case 'gesture':
+            if (step.gestureName) {
+              playGestureByName(step.gestureName, step.duration || 1.5);
+            }
+            break;
+            
+          case 'expression':
+            if (step.expressionName) {
+              setExpressionValue(step.expressionName, step.expressionValue || 0.8);
+            }
+            break;
+        }
+        
+        console.log(`[NeuralCore] Executed reaction step ${index + 1}: ${step.type} - ${step.name}`);
+      }, cumulativeDelay);
+    });
+  };
 
   const playGesture = useCallback((gestureName: string, duration: number = 1.5) => {
     const rotations = getGestureRotations(gestureName);

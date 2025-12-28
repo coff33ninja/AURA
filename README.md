@@ -121,6 +121,134 @@ Each emotion triggers coordinated, multi-system reactions:
   - Minimal intrusive gestures
   - Respectful eye contact patterns
 
+---
+
+## 🎛️ Modular Behavior System (NEW)
+
+> ⚠️ **Note**: This system is under active development. Not all features have been fully tested or implemented yet.
+
+AURA now includes a comprehensive **Modular Behavior Editor** that allows real-time customization of VRM avatar behaviors through a visual interface. Configure body poses, hand gestures, facial expressions, and chain them together into complex reactions.
+
+### **Behavior Editor Tabs**
+
+| Tab | Description | Features |
+|-----|-------------|----------|
+| **Transform** | Position, rotation, scale | Camera distance, height, look-at controls, position presets |
+| **Body** | Arm, spine, chest poses | Left/right arm rotation (X/Y/Z), spine/chest adjustments, eye tracking toggle |
+| **Hands** | Individual finger control | 28 finger bones (14 per hand), curl sliders, presets (Open, Fist, Point, Peace, Grip, ThumbsUp) |
+| **Facial** | Expressions & visemes | 5 expressions (joy, angry, sorrow, fun, surprised), 5 mouth visemes (a, i, u, e, o), 5 eye controls, custom preset save/load |
+| **Expressions** | Expression mappings | Map standard names to model-specific expressions |
+| **Gestures** | Create/edit gestures | New gesture creation, bone sliders, duration/intensity/transition controls, delete |
+| **Idle** | Idle animations | Breathing, blinking, sway, head movement settings with presets |
+| **Lip Sync** | Audio-driven mouth | Sensitivity, smoothing, viseme weights |
+| **Reactions** | Chained behavior sequences | Build complex reactions from body/hands/facial/gesture steps |
+| **Import/Export** | Save/load configs | Export to JSON, import from file |
+
+### **Hands Tab - Finger Control**
+
+Control all 28 finger bones with precision:
+
+```
+Left Hand:                    Right Hand:
+├── Thumb (Proximal, Distal)  ├── Thumb (Proximal, Distal)
+├── Index (Prox, Inter, Dist) ├── Index (Prox, Inter, Dist)
+├── Middle (Prox, Inter, Dist)├── Middle (Prox, Inter, Dist)
+├── Ring (Prox, Inter, Dist)  ├── Ring (Prox, Inter, Dist)
+└── Little (Prox, Inter, Dist)└── Little (Prox, Inter, Dist)
+```
+
+**Hand Presets:**
+- **Open** - All fingers extended
+- **Fist** - All fingers curled
+- **Point** - Index extended, others curled
+- **Peace** - Index + middle extended (V sign)
+- **Grip** - Partial curl for holding objects
+- **ThumbsUp** - Thumb extended, others curled
+
+### **Facial Tab - Expression Control**
+
+Real-time facial expression editing with live VRM preview:
+
+**Expressions:** joy, angry, sorrow, fun, surprised (0-1 intensity)
+**Mouth Visemes:** a, i, u, e, o (for lip sync)
+**Eye Controls:** blink, lookUp, lookDown, lookLeft, lookRight
+
+**Facial Presets:**
+- **Happy** - joy: 0.8, fun: 0.5
+- **Sad** - sorrow: 0.8, eyes down
+- **Angry** - angry: 0.8
+- **Surprised** - surprised: 0.9, mouth 'o'
+- **Neutral** - All values reset to 0
+
+**Custom Presets:** Save your own facial configurations and recall them instantly.
+
+### **Reactions Tab - Chained Behavior Sequences**
+
+Create complex, multi-step reactions that chain together body poses, hand gestures, and facial expressions:
+
+```
+Reaction: "Excited Wave"
+├── Step 1: BODY - Arms raised (delay: 0s, duration: 0.5s)
+├── Step 2: FACIAL - Happy expression (delay: 0s, duration: 1s)
+├── Step 3: HANDS - Open hands (delay: 0.2s, duration: 0.8s)
+└── Step 4: GESTURE - Wave gesture (delay: 0.5s, duration: 1.5s)
+```
+
+**Step Types:**
+- **+ Body** - Captures current Body tab configuration
+- **+ Hands** - Captures current Hands tab configuration
+- **+ Facial** - Captures current Facial tab configuration
+- **+ Gesture** - Select from available gestures
+- **+ Expression** - Select expression with intensity
+
+**Step Controls:**
+- Delay (seconds before step starts)
+- Duration (how long step lasts)
+- Reorder with ↑/↓ buttons
+- Delete individual steps
+
+**Workflow:**
+1. Configure Body/Hands/Facial tabs to desired pose
+2. Go to Reactions tab
+3. Create new reaction with name
+4. Click + buttons to capture each configuration as a step
+5. Adjust timing (delay/duration) for each step
+6. Reorder steps as needed
+7. Preview with ▶ button
+
+### **Config File Structure**
+
+Behaviors are stored as JSON sidecar files per model:
+
+```
+public/VRM-Models/sidecars/
+├── _default.vrm.transform.json
+├── _default.vrm.body.json
+├── _default.vrm.hands.json
+├── _default.vrm.facial.json
+├── _default.vrm.gestures.json
+├── _default.vrm.idle.json
+├── _default.vrm.lipsync.json
+├── _default.vrm.reactions.json
+├── _default.vrm.expressions.json
+└── [ModelName].vrm.[type].json  (model-specific overrides)
+```
+
+### **Real-Time Preview**
+
+All slider changes are immediately reflected on the VRM model:
+- Body bone rotations update in real-time
+- Finger positions animate smoothly
+- Facial expressions blend live
+- No need to save before seeing changes
+
+### **Persistence**
+
+- Changes are saved to localStorage per model
+- Export full config to JSON file for backup
+- Import configs from JSON files
+- Model-specific configs override defaults
+
 ### 🎤 **Real-Time Voice & Audio**
 - Google Gemini Live API integration
 - Native audio input/output
@@ -278,7 +406,12 @@ Fires: Coordinated expression + posture + gesture + gaze + idle + mode
 
 ### **Key Files**
 - `services/liveManager.ts` - Gemini integration, command parsing
+- `services/behaviorManager.ts` - Central behavior coordinator, load/save/update configs
+- `services/configLoader.ts` - JSON config file loading with caching
+- `services/aiInstructionGenerator.ts` - Generate AI instructions from behavior configs
 - `components/NeuralCore.tsx` - VRM rendering, animation system, embodiment
+- `components/BehaviorEditor.tsx` - Visual behavior editor UI with all tabs
+- `types/behaviorTypes.ts` - Behavior system type definitions
 - `App.tsx` - UI, state management, settings
 - `types.ts` - TypeScript definitions
 - `utils/audioUtils.ts` - Audio processing
@@ -349,6 +482,7 @@ This isn't just avatar + AI. AURA represents a new paradigm:
 4. **Multi-System Coordination** - Gestures, expressions, posture, gaze work together
 5. **Spatial Awareness** - Avatar understands and responds to environment
 6. **Personality Integration** - Consistent character across all systems
+7. **Modular Behavior System** - Visual editor for creating custom poses, gestures, and chained reactions (NEW)
 
 ---
 

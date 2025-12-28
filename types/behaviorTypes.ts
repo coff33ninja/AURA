@@ -197,6 +197,23 @@ export interface LipSyncConfig {
 }
 
 /**
+ * A step in a reaction chain - can be body pose, hand pose, or facial expression
+ */
+export interface ReactionStep {
+  type: 'body' | 'hands' | 'facial' | 'gesture' | 'expression';
+  name: string; // display name for this step
+  delay: number; // seconds to wait before this step
+  duration: number; // how long this step lasts
+  // Config snapshots (only one will be set based on type)
+  bodyConfig?: Partial<BodyConfig>;
+  handsConfig?: Partial<HandsConfig>;
+  facialConfig?: Partial<FacialConfig>;
+  gestureName?: string; // reference to a saved gesture
+  expressionName?: string; // expression name
+  expressionValue?: number; // expression intensity
+}
+
+/**
  * Single reaction/emotion definition
  */
 export interface ReactionDefinition {
@@ -208,6 +225,8 @@ export interface ReactionDefinition {
   lookAt?: { x: number; y: number; z: number };
   duration: number; // how long the reaction lasts
   mode: 'ACTIVE' | 'PASSIVE';
+  // Chain of steps to execute in sequence
+  steps?: ReactionStep[];
 }
 
 /**
