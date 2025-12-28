@@ -1,0 +1,29 @@
+{
+  "modelName": "Arlecchino-Normal_look",
+  "vrmVersion": "0",
+  "transform": {
+    "rotation": 180,
+    "scale": 1.0,
+    "offsetY": 0
+  },
+  "defaultPose": {
+    "leftUpperArm": { "x": 0, "y": 0, "z": 0.5 },
+    "rightUpperArm": { "x": 0, "y": 0, "z": -0.5 }
+  },
+  "camera": {
+    "distance": 2.0,
+    "height": 1.3,
+    "lookAtHeight": 1.2
+  },
+  "lipSync": {
+    "sensitivity": 4.0,
+    "smoothing": 0.3
+  },
+  "idle": {
+    "breathingSpeed": 0.8,
+    "breathingIntensity": 0.02,
+    "blinkInterval": 4.0,
+    "blinkDuration": 0.15,
+    "swayAmount": 0.1
+  }
+}

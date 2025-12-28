@@ -1,0 +1,80 @@
+{
+  "mappings": {
+    "joy": ["happy"],
+    "sorrow": ["sad"],
+    "fun": ["relaxed"],
+    "a": ["aa"],
+    "i": ["ih"],
+    "u": ["ou"],
+    "e": ["ee"],
+    "o": ["oh"]
+  },
+  "groups": {
+    "happy": {
+      "binds": [{ "node": 145, "index": 3, "weight": 1 }],
+      "isBinary": false,
+      "name": "happy",
+      "presetName": "joy"
+    },
+    "angry": {
+      "binds": [{ "node": 145, "index": 1, "weight": 1 }],
+      "isBinary": false,
+      "name": "angry",
+      "presetName": "angry"
+    },
+    "sad": {
+      "binds": [{ "node": 145, "index": 4, "weight": 1 }],
+      "isBinary": false,
+      "name": "sad",
+      "presetName": "sorrow"
+    },
+    "relaxed": {
+      "binds": [{ "node": 145, "index": 2, "weight": 1 }],
+      "isBinary": false,
+      "name": "relaxed",
+      "presetName": "fun"
+    },
+    "surprised": {
+      "binds": [{ "node": 145, "index": 5, "weight": 1 }],
+      "isBinary": false,
+      "name": "surprised",
+      "presetName": "surprised"
+    },
+    "aa": {
+      "binds": [{ "node": 145, "index": 39, "weight": 1 }],
+      "isBinary": false,
+      "name": "aa",
+      "presetName": "a"
+    },
+    "ih": {
+      "binds": [{ "node": 145, "index": 40, "weight": 1 }],
+      "isBinary": false,
+      "name": "ih",
+      "presetName": "i"
+    },
+    "ou": {
+      "binds": [{ "node": 145, "index": 41, "weight": 1 }],
+      "isBinary": false,
+      "name": "ou",
+      "presetName": "u"
+    },
+    "ee": {
+      "binds": [{ "node": 145, "index": 42, "weight": 1 }],
+      "isBinary": false,
+      "name": "ee",
+      "presetName": "e"
+    },
+    "oh": {
+      "binds": [{ "node": 145, "index": 43, "weight": 1 }],
+      "isBinary": false,
+      "name": "oh",
+      "presetName": "o"
+    },
+    "blink": {
+      "binds": [{ "node": 145, "index": 13, "weight": 1 }],
+      "isBinary": false,
+      "name": "blink",
+      "presetName": "blink"
+    }
+  }
+}

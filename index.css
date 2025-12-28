@@ -156,6 +156,38 @@ body {
 .volume-bar-4 { height: 16px; }
 .volume-bar-5 { height: 19px; }
 
+/* Slider styling for pose editor */
+.slider-cyan::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(34, 211, 238, 0.8);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+}
+
+.slider-cyan::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(34, 211, 238, 0.8);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+}
+
+.slider-cyan:hover::-webkit-slider-thumb {
+  background: rgba(34, 211, 238, 1);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+}
+
+.slider-cyan:hover::-moz-range-thumb {
+  background: rgba(34, 211, 238, 1);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 640px) {
   /* Smaller HUD panels on mobile */

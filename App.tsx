@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ConnectionState } from "./types";
 import { LiveManager, VrmCommand } from "./services/liveManager";
-import { NeuralCore } from "./components/NeuralCore";
+import { NeuralCore, PoseSettings } from "./components/NeuralCore";
 import { conversationStore } from "./services/conversationStore";
+import { VrmConfig } from "./types/vrmConfig";
 
 // localStorage keys for user preferences
 const STORAGE_KEYS = {
@@ -10,6 +11,7 @@ const STORAGE_KEYS = {
   selectedVoice: "aura_selectedVoice",
   selectedPersonality: "aura_selectedPersonality",
   selectedMode: "aura_selectedMode",
+  poseSettings: "aura_poseSettings",
 };
 
 const App: React.FC = () => {
@@ -108,6 +110,44 @@ const App: React.FC = () => {
     totalMessages: 0,
     totalSessions: 0,
   });
+  const [poseEditorOpen, setPoseEditorOpen] = useState(false);
+  
+  // Per-model pose settings stored as { modelName: PoseSettings }
+  const [allPoseSettings, setAllPoseSettings] = useState<Record<string, PoseSettings>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.poseSettings);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  
+  // Track loaded config for current model
+  const [loadedConfig, setLoadedConfig] = useState<VrmConfig | null>(null);
+  
+  // Get current model's pose settings - use localStorage if exists, otherwise use config defaults
+  const currentPoseSettings: PoseSettings = allPoseSettings[selectedVrm] || (loadedConfig ? {
+    rotation: loadedConfig.transform.rotation,
+    leftArmZ: Math.round((loadedConfig.defaultPose.leftUpperArm.z * 180) / Math.PI),
+    rightArmZ: Math.round((loadedConfig.defaultPose.rightUpperArm.z * 180) / Math.PI),
+  } : {
+    rotation: 180,
+    leftArmZ: 30,
+    rightArmZ: -30,
+  });
+  
+  // Handler for when VRM config is loaded
+  const handleConfigLoaded = useCallback((config: VrmConfig) => {
+    setLoadedConfig(config);
+    console.log('[App] Config loaded for', config.modelName, config);
+  }, []);
+  
+  const updatePoseSettings = (updates: Partial<PoseSettings>) => {
+    const newSettings = { ...currentPoseSettings, ...updates };
+    const newAllSettings = { ...allPoseSettings, [selectedVrm]: newSettings };
+    setAllPoseSettings(newAllSettings);
+    localStorage.setItem(STORAGE_KEYS.poseSettings, JSON.stringify(newAllSettings));
+  };
 
   const liveVolumeRef = useRef<number>(0);
   const liveMicVolumeRef = useRef<number>(0);
@@ -145,19 +185,21 @@ const App: React.FC = () => {
       .then((models: string[]) => {
         if (models.length > 0) {
           setAvailableVrms(models);
-          // Use saved preference if valid, otherwise first model
+          // Use saved preference if valid, otherwise default to Mania-Creator-Zoe
           const saved = localStorage.getItem(STORAGE_KEYS.selectedVrm);
           if (saved && models.includes(saved)) {
             setSelectedVrm(saved);
           } else {
-            setSelectedVrm(models[0]);
+            // Prefer Mania-Creator-Zoe as default, fallback to first model
+            const defaultModel = models.find(m => m.includes("Mania-Creator-Zoe")) || models[0];
+            setSelectedVrm(defaultModel);
           }
         }
       })
       .catch((err) => {
         console.error("Failed to load VRM models:", err);
-        setAvailableVrms(["AvatarSample_D.vrm"]);
-        setSelectedVrm("AvatarSample_D.vrm");
+        setAvailableVrms(["Mania-Creator-Zoe.vrm"]);
+        setSelectedVrm("Mania-Creator-Zoe.vrm");
       });
   }, []);
 
@@ -313,12 +355,147 @@ const App: React.FC = () => {
             vrmCommand={vrmCommand}
             vrmModel={selectedVrm}
             onVrmExpressionsLoaded={setVrmExpressions}
+            poseSettings={currentPoseSettings}
+            onConfigLoaded={handleConfigLoaded}
           />
         )}
       </div>
 
       {/* HUD Overlay Layer */}
       <div className="absolute inset-0 z-10 pointer-events-none">
+        {/* Right side: Pose Editor Panel */}
+        {poseEditorOpen && (
+          <div className="absolute right-4 top-16 w-64 pointer-events-auto">
+            <div className="hud-panel p-3">
+              <div className="flex justify-between items-center mb-3">
+                <span className="font-display text-[10px] tracking-[0.15em] text-cyan-400/80">
+                  POSE EDITOR
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPoseEditorOpen(false)}
+                  className="text-cyan-500/60 hover:text-cyan-400 text-xs">
+                  ✕
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Rotation */}
+                <div>
+                  <label className="flex justify-between text-[9px] text-cyan-500/50 mb-1">
+                    <span>ROTATION</span>
+                    <span>{currentPoseSettings.rotation}°</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    value={currentPoseSettings.rotation}
+                    onChange={(e) => updatePoseSettings({ rotation: Number(e.target.value) })}
+                    className="w-full h-1 bg-cyan-900/40 rounded appearance-none cursor-pointer slider-cyan"
+                    aria-label="Model rotation"
+                  />
+                  <div className="flex justify-between mt-1">
+                    <button
+                      type="button"
+                      onClick={() => updatePoseSettings({ rotation: 0 })}
+                      className="text-[8px] text-cyan-500/40 hover:text-cyan-400">
+                      0°
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePoseSettings({ rotation: 180 })}
+                      className="text-[8px] text-cyan-500/40 hover:text-cyan-400">
+                      180°
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePoseSettings({ rotation: 360 })}
+                      className="text-[8px] text-cyan-500/40 hover:text-cyan-400">
+                      360°
+                    </button>
+                  </div>
+                </div>
+
+                {/* Left Arm */}
+                <div>
+                  <label className="flex justify-between text-[9px] text-cyan-500/50 mb-1">
+                    <span>LEFT ARM</span>
+                    <span>{currentPoseSettings.leftArmZ}°</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="-90"
+                    max="90"
+                    value={currentPoseSettings.leftArmZ}
+                    onChange={(e) => updatePoseSettings({ leftArmZ: Number(e.target.value) })}
+                    className="w-full h-1 bg-cyan-900/40 rounded appearance-none cursor-pointer slider-cyan"
+                    aria-label="Left arm rotation"
+                  />
+                </div>
+
+                {/* Right Arm */}
+                <div>
+                  <label className="flex justify-between text-[9px] text-cyan-500/50 mb-1">
+                    <span>RIGHT ARM</span>
+                    <span>{currentPoseSettings.rightArmZ}°</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="-90"
+                    max="90"
+                    value={currentPoseSettings.rightArmZ}
+                    onChange={(e) => updatePoseSettings({ rightArmZ: Number(e.target.value) })}
+                    className="w-full h-1 bg-cyan-900/40 rounded appearance-none cursor-pointer slider-cyan"
+                    aria-label="Right arm rotation"
+                  />
+                </div>
+
+                {/* Presets */}
+                <div>
+                  <div className="text-[9px] text-cyan-500/50 mb-2">PRESETS</div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Reset to config defaults by removing localStorage override
+                        const newAllSettings = { ...allPoseSettings };
+                        delete newAllSettings[selectedVrm];
+                        setAllPoseSettings(newAllSettings);
+                        localStorage.setItem(STORAGE_KEYS.poseSettings, JSON.stringify(newAllSettings));
+                      }}
+                      className="py-1 text-[9px] text-cyan-400/60 border border-cyan-500/20 hover:border-cyan-500/40 rounded">
+                      Config Default
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePoseSettings({ rotation: 0, leftArmZ: 30, rightArmZ: -30 })}
+                      className="py-1 text-[9px] text-cyan-400/60 border border-cyan-500/20 hover:border-cyan-500/40 rounded">
+                      Flip 0°
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePoseSettings({ leftArmZ: 0, rightArmZ: 0 })}
+                      className="py-1 text-[9px] text-cyan-400/60 border border-cyan-500/20 hover:border-cyan-500/40 rounded">
+                      T-Pose
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePoseSettings({ leftArmZ: 60, rightArmZ: -60 })}
+                      className="py-1 text-[9px] text-cyan-400/60 border border-cyan-500/20 hover:border-cyan-500/40 rounded">
+                      Arms Down
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-[8px] text-cyan-500/30 text-center">
+                  Settings saved per model • Config: {loadedConfig?.modelName || 'loading...'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Left side: Text Chat Panel */}
         {textChatEnabled && (
           <div className="absolute left-4 top-16 bottom-24 w-72 pointer-events-auto flex flex-col">
@@ -449,7 +626,10 @@ const App: React.FC = () => {
                 <SettingRow label="AVATAR">
                   <select
                     value={selectedVrm}
-                    onChange={(e) => setSelectedVrm(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedVrm(e.target.value);
+                      setLoadedConfig(null); // Clear config so it reloads for new model
+                    }}
                     className="hud-select"
                     title="Select avatar model"
                     aria-label="Avatar model">
@@ -563,6 +743,18 @@ const App: React.FC = () => {
                       CLEAR HISTORY
                     </button>
                   </div>
+                </SettingRow>
+
+                <SettingRow label="POSE">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPoseEditorOpen(!poseEditorOpen);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full py-1.5 text-[10px] tracking-widest text-cyan-400/60 border border-cyan-500/20 hover:border-cyan-500/40 hover:text-cyan-400 rounded transition-colors">
+                    EDIT POSE
+                  </button>
                 </SettingRow>
               </div>
 

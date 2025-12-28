@@ -3,6 +3,13 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRM, VRMHumanBoneName, VRMUtils } from '@pixiv/three-vrm';
 import type { VrmCommand } from '../services/liveManager';
+import { VrmConfig, getVrmConfig, saveVrmConfigToStorage, DEFAULT_VRM_CONFIG } from '../types/vrmConfig';
+
+export interface PoseSettings {
+  rotation: number; // Y rotation in degrees (0-360)
+  leftArmZ: number; // Left arm Z rotation (-90 to 90)
+  rightArmZ: number; // Right arm Z rotation (-90 to 90)
+}
 
 interface NeuralCoreProps {
   volume: number; // 0.0 to 1.0 (or higher peaks)
@@ -10,15 +17,18 @@ interface NeuralCoreProps {
   vrmCommand: VrmCommand | null;
   vrmModel?: string; // filename under /VRM-Models, e.g. 'Arlecchino-Normal_look.vrm'
   onVrmExpressionsLoaded: (expressions: string[]) => void;
+  poseSettings?: PoseSettings;
+  onConfigLoaded?: (config: VrmConfig) => void; // Callback when config is loaded
 }
 
-export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCommand, vrmModel, onVrmExpressionsLoaded }) => {
+export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCommand, vrmModel, onVrmExpressionsLoaded, poseSettings, onConfigLoaded }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const vrmRef = useRef<VRM | null>(null);
   const clockRef = useRef<THREE.Clock>(new THREE.Clock());
+  const vrmConfigRef = useRef<VrmConfig>(DEFAULT_VRM_CONFIG);
 
   // Scenery Refs
   const particlesRef = useRef<THREE.Points | null>(null);
@@ -70,7 +80,8 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
   
   // Postural state (position and root rotation)
   const bodyPositionRef = useRef({ x: 0, y: 0, z: 0 });
-  const bodyRotationRef = useRef({ x: 0, y: Math.PI, z: 0 }); // Math.PI = face camera
+  const bodyRotationRef = useRef({ x: 0, y: 0, z: 0 }); // Set dynamically based on VRM version
+  const baseRotationY = useRef(0); // Base Y rotation for facing camera (0 for VRM0, Math.PI for VRM1)
   const postureStateRef = useRef<'neutral' | 'leaning_forward' | 'leaning_back' | 'rotating_toward_camera'>('neutral');
   
   // Walk/movement state
@@ -85,13 +96,23 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
   // This allows Gemini to use consistent names across all models
   const resolveExpressionAlias = (alias: string): string[] => {
     try {
+      const lowerAlias = alias.toLowerCase();
+      
+      // First: check config expressions mapping (highest priority - user-defined)
+      const config = vrmConfigRef.current;
+      if (config.expressions) {
+        const configMapping = config.expressions[lowerAlias] || config.expressions[alias];
+        if (configMapping) {
+          return [configMapping];
+        }
+      }
+      
       const sc = sidecarRef.current;
       if (!sc || !sc.groups) return [alias];
       
-      const lowerAlias = alias.toLowerCase();
       const results: string[] = [];
       
-      // First: find by presetName (most reliable for cross-model consistency)
+      // Second: find by presetName (most reliable for cross-model consistency)
       for (const [groupName, groupData] of Object.entries(sc.groups)) {
         const preset = (groupData as any).presetName?.toLowerCase();
         if (preset === lowerAlias) {
@@ -100,13 +121,13 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       }
       if (results.length > 0) return results;
       
-      // Second: exact match on group name
+      // Third: exact match on group name
       if (sc.groups[alias]) return [alias];
       
-      // Third: check mappings from patching
+      // Fourth: check mappings from patching
       if (sc.mappings && sc.mappings[alias]) return sc.mappings[alias];
       
-      // Fourth: case-insensitive match on group name
+      // Fifth: case-insensitive match on group name
       const keys = Object.keys(sc.groups);
       const matches = keys.filter(k => k.toLowerCase() === lowerAlias);
       if (matches.length > 0) return matches;
@@ -487,14 +508,14 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       case 'engaged':
       case 'interested':
         postureStateRef.current = 'rotating_toward_camera';
-        bodyRotationRef.current.y = 0.3; // Rotate toward camera
+        bodyRotationRef.current.y = baseRotationY.current + 0.3; // Rotate slightly toward camera
         break;
       default:
         postureStateRef.current = 'neutral';
         bodyPositionRef.current.x = 0;
         bodyPositionRef.current.z = 0;
         // Keep Y unchanged - it holds the height offset
-        bodyRotationRef.current = { x: 0, y: Math.PI, z: 0 }; // Math.PI keeps model facing camera
+        bodyRotationRef.current = { x: 0, y: baseRotationY.current, z: 0 }; // Reset to base rotation
     }
   };
 
@@ -655,13 +676,32 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       setLoadError(null);
     }
     
+    // Load VRM config before loading the model
+    const modelBaseName = vrmModel?.replace('.vrm', '') || 'AvatarSample_D';
+    getVrmConfig(modelBaseName).then(config => {
+      vrmConfigRef.current = config;
+      console.log('[NeuralCore] Loaded config for', modelBaseName, config);
+      onConfigLoaded?.(config);
+    });
+    
     loader.load(
       vrmUrl,
-      (gltf) => {
+      async (gltf) => {
         setLoadError(null);
         const vrm = gltf.userData.vrm as VRM;
-        // Un-rotate the VRM if needed (VRM 0.0 vs 1.0 quirks, usually VRMLoaderPlugin handles it)
-        VRMUtils.rotateVRM0(vrm);
+        
+        // Get the loaded config (should be ready by now)
+        const config = vrmConfigRef.current;
+        
+        // Log VRM version for debugging
+        const isVRM0 = vrm.meta?.metaVersion === '0';
+        console.log('[NeuralCore] VRM version:', isVRM0 ? '0.x' : '1.0', 'meta:', vrm.meta?.metaVersion);
+        
+        // Use config for rotation, with pose settings as override
+        const rotationDeg = poseSettings?.rotation ?? config.transform.rotation;
+        const rotationRad = (rotationDeg * Math.PI) / 180;
+        baseRotationY.current = rotationRad;
+        bodyRotationRef.current = { x: 0, y: rotationRad, z: 0 };
         
         scene.add(vrm.scene);
         vrmRef.current = vrm;
@@ -672,7 +712,33 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         expressionPersist.current = {};
         expressionTargets.current = {};
         expressionTargetsActual.current = {};
-        boneTargets.current = {};
+        
+        // Set default arm positions from config, with pose settings as override
+        const leftArmDeg = poseSettings?.leftArmZ ?? (config.defaultPose.leftUpperArm.z * 180 / Math.PI);
+        const rightArmDeg = poseSettings?.rightArmZ ?? (config.defaultPose.rightUpperArm.z * 180 / Math.PI);
+        boneTargets.current = {
+          leftUpperArm: { 
+            x: config.defaultPose.leftUpperArm.x, 
+            y: config.defaultPose.leftUpperArm.y, 
+            z: (leftArmDeg * Math.PI) / 180 
+          },
+          rightUpperArm: { 
+            x: config.defaultPose.rightUpperArm.x, 
+            y: config.defaultPose.rightUpperArm.y, 
+            z: (rightArmDeg * Math.PI) / 180 
+          },
+        };
+        
+        // Add other default pose bones if specified in config
+        if (config.defaultPose.leftLowerArm) {
+          boneTargets.current.leftLowerArm = config.defaultPose.leftLowerArm;
+        }
+        if (config.defaultPose.rightLowerArm) {
+          boneTargets.current.rightLowerArm = config.defaultPose.rightLowerArm;
+        }
+        if (config.defaultPose.spine) {
+          boneTargets.current.spine = config.defaultPose.spine;
+        }
         
         // === Dynamic Height Adjustment ===
         // Compute model bounds and adjust position/camera for proper framing
@@ -717,14 +783,6 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
             availableAnimations.current.set(clip.name, clip);
             console.log('Available animation:', clip.name);
           });
-        }
-        
-        // Pose the arms slightly down naturally
-        if (vrm.humanoid) {
-            const leftArm = vrm.humanoid.getNormalizedBoneNode('leftUpperArm');
-            const rightArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm');
-            if (leftArm) leftArm.rotation.z = Math.PI / 3;
-            if (rightArm) rightArm.rotation.z = -Math.PI / 3;
         }
 
         // Initialize expressionValues keys to zero for smooth control
@@ -822,18 +880,22 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
             const sVol = smoothedVolume.current;
             
             // 1. Enhanced Audio-Driven Lip Sync + Phonemes
-            // Use standard VRM preset names: a, i, u, e, o (not aa, ih)
-            // Boost sensitivity for better visibility
-            const mouthOpen = Math.min(1.0, sVol * 4.0); // Increased multiplier from 3.0 to 4.0
-            addExpressionTarget('a', mouthOpen * 0.8);   // Primary mouth open
-            addExpressionTarget('i', mouthOpen * 0.3);   // Reduced for variety
-            addExpressionTarget('u', mouthOpen * 0.25);
-            addExpressionTarget('e', mouthOpen * 0.3);
-            addExpressionTarget('o', mouthOpen * 0.6);   // Secondary mouth shape
+            // Use config settings for sensitivity and viseme weights
+            const config = vrmConfigRef.current;
+            const lipSyncSensitivity = config.lipSync?.sensitivity ?? 4.0;
+            const visemeWeights = config.lipSync?.visemeWeights ?? { a: 0.8, i: 0.3, u: 0.25, e: 0.3, o: 0.6 };
+            
+            const mouthOpen = Math.min(1.0, sVol * lipSyncSensitivity);
+            addExpressionTarget('a', mouthOpen * visemeWeights.a);
+            addExpressionTarget('i', mouthOpen * visemeWeights.i);
+            addExpressionTarget('u', mouthOpen * visemeWeights.u);
+            addExpressionTarget('e', mouthOpen * visemeWeights.e);
+            addExpressionTarget('o', mouthOpen * visemeWeights.o);
 
             // 2. Breathing Animation (subtle chest movement via spine bones, not expressions)
+            const idleConfig = config.idle ?? { breathingSpeed: 0.8, breathingIntensity: 0.02, blinkInterval: 4.0, blinkDuration: 0.15, swayAmount: 0.1 };
             breathingTime.current += delta;
-            breathingPhase.current = Math.sin(breathingTime.current * 0.8) * 0.5 + 0.5; // 0 to 1
+            breathingPhase.current = Math.sin(breathingTime.current * idleConfig.breathingSpeed) * 0.5 + 0.5; // 0 to 1
             // Breathing is handled via spine bone rotation in the bone update section below
 
             // 3. Blinking (with interruption support)
@@ -841,12 +903,13 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
               blinkTimer.current += delta;
               if (blinkTimer.current >= nextBlinkTime.current) {
                 blinkTimer.current = 0;
-                nextBlinkTime.current = Math.random() * 4 + 2;
+                nextBlinkTime.current = Math.random() * idleConfig.blinkInterval + 2;
               }
               const blinkPhase = blinkTimer.current;
               let blinkValue = 0;
-              if (blinkPhase < 0.1) blinkValue = blinkPhase * 10;
-              else if (blinkPhase < 0.2) blinkValue = 1 - (blinkPhase - 0.1) * 10;
+              const blinkDur = idleConfig.blinkDuration;
+              if (blinkPhase < blinkDur) blinkValue = blinkPhase / blinkDur;
+              else if (blinkPhase < blinkDur * 2) blinkValue = 1 - (blinkPhase - blinkDur) / blinkDur;
               addExpressionTarget('blink', Math.max(0, blinkValue));
             }
 
@@ -872,8 +935,8 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
                 boneTargets.current['head'] = { x: 0, y: tilt, z: 0 };
               } else if (currentIdleGesture === 'shoulder_shrug') {
                 const shrug = Math.sin(elapsedTime * 1.2) * 0.08;
-                boneTargets.current['rightUpperArm'] = { x: 0, y: 0, z: -Math.PI / 3 + shrug };
-                boneTargets.current['leftUpperArm'] = { x: 0, y: 0, z: Math.PI / 3 - shrug };
+                boneTargets.current['rightUpperArm'] = { x: 0, y: 0, z: -0.5 + shrug };
+                boneTargets.current['leftUpperArm'] = { x: 0, y: 0, z: 0.5 - shrug };
               } else if (currentIdleGesture === 'hand_wave') {
                 const wave = Math.sin(elapsedTime * 3) * 0.3;
                 boneTargets.current['rightHand'] = { x: 0, y: wave, z: 0 };
@@ -1027,7 +1090,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
           }
           
           // Standard VRM expression presets that Gemini should know about
-          const standardPresets = ['joy', 'angry', 'sorrow', 'fun', 'a', 'i', 'u', 'e', 'o', 'blink'];
+          const standardPresets = ['joy', 'angry', 'sorrow', 'fun', 'surprised', 'a', 'i', 'u', 'e', 'o', 'blink'];
           const availablePresets = standardPresets.filter(p => presetNames.has(p));
           
           console.log('Available expression presets:', availablePresets);
@@ -1054,6 +1117,26 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         renderer.dispose();
     };
   }, [vrmModel]); // Re-run when selected model changes
+
+  // Update pose settings when they change (live update without reload)
+  useEffect(() => {
+    if (!poseSettings) return;
+    
+    // Update rotation
+    const rotationRad = (poseSettings.rotation * Math.PI) / 180;
+    baseRotationY.current = rotationRad;
+    bodyRotationRef.current.y = rotationRad;
+    
+    // Update arm positions (ensure boneTargets exists)
+    if (!boneTargets.current.leftUpperArm) {
+      boneTargets.current.leftUpperArm = { x: 0, y: 0, z: 0 };
+    }
+    if (!boneTargets.current.rightUpperArm) {
+      boneTargets.current.rightUpperArm = { x: 0, y: 0, z: 0 };
+    }
+    boneTargets.current.leftUpperArm.z = (poseSettings.leftArmZ * Math.PI) / 180;
+    boneTargets.current.rightUpperArm.z = (poseSettings.rightArmZ * Math.PI) / 180;
+  }, [poseSettings]);
 
   // Handle incoming VRM commands by routing to expressionTargets / boneTargets
   useEffect(() => {
