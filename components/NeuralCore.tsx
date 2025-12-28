@@ -631,35 +631,40 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         vrmRef.current = vrm;
         
         // === Dynamic Height Adjustment ===
-        // Compute model bounds and adjust Y position if too tall
-        // We DON'T scale - just lower the model so walking still works
+        // Compute model bounds and adjust position/camera for proper framing
+        // We DON'T scale - just adjust Y position so walking still works
         const box = new THREE.Box3().setFromObject(vrm.scene);
         const modelHeight = box.max.y - box.min.y;
-        const modelCenter = new THREE.Vector3();
-        box.getCenter(modelCenter);
         
-        // Target: model's head should be around Y=1.5 for good framing
-        // Standard camera is at Y=1.4, looking at Y=1.3
-        const targetHeadY = 1.5;
-        const headRatio = 0.9; // Head is roughly at 90% of model height
-        const currentHeadY = box.min.y + (modelHeight * headRatio);
-        const yOffset = targetHeadY - currentHeadY;
+        // Frame the model so we see head + upper body nicely
+        // Target: position model so chest is at world Y ~1.0, giving headroom above
+        const chestRatio = 0.65; // Chest is roughly at 65% of model height
+        const currentChestY = box.min.y + (modelHeight * chestRatio);
+        const targetChestY = 1.0; // Where we want the chest to be in world space
+        const yOffset = targetChestY - currentChestY;
         
         // Apply offset to model position (this becomes the base Y for walking)
         vrm.scene.position.y = yOffset;
         walkStateRef.current.position.y = yOffset;
         bodyPositionRef.current.y = yOffset;
         
-        // Adjust camera based on model proportions
-        const eyeLevelY = box.min.y + yOffset + (modelHeight * 0.85);
-        const chestY = box.min.y + yOffset + (modelHeight * 0.7);
+        // Camera setup: pull back more for taller models, frame upper body
+        const headY = box.min.y + yOffset + (modelHeight * 0.92); // Top of head
+        const chestY = box.min.y + yOffset + (modelHeight * chestRatio);
+        const cameraTargetY = (headY + chestY) / 2; // Look at midpoint between head and chest
+        
+        // Camera distance: further back for taller models to show more
+        const baseDistance = 2.0;
+        const distanceScale = Math.max(1.0, modelHeight / 1.6); // 1.6m is "standard" height
+        const cameraZ = baseDistance * distanceScale;
+        const cameraY = cameraTargetY + 0.1; // Slightly above target
         
         if (cameraRef.current) {
-          cameraRef.current.position.set(0, eyeLevelY, 1.5);
-          cameraRef.current.lookAt(0, chestY, 0);
+          cameraRef.current.position.set(0, cameraY, cameraZ);
+          cameraRef.current.lookAt(0, cameraTargetY, 0);
         }
         
-        console.log(`VRM Height: ${modelHeight.toFixed(2)}m, Y-offset: ${yOffset.toFixed(2)}, Camera Y: ${eyeLevelY.toFixed(2)}`);
+        console.log(`VRM Height: ${modelHeight.toFixed(2)}m, Y-offset: ${yOffset.toFixed(2)}, Camera: Y=${cameraY.toFixed(2)} Z=${cameraZ.toFixed(2)}`);
         
         // Setup animation mixer
         mixerRef.current = new THREE.AnimationMixer(vrm.scene);
