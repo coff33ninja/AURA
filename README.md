@@ -229,14 +229,16 @@ Fires: Coordinated expression + posture + gesture + gaze + idle + mode
 2. **Set up environment:**
    Create `.env.local` file:
    ```env
-   VITE_GEMINI_API_KEYS=your_api_key_here
+   GEMINI_API_KEYS=your_api_key_here
    ```
+   
+   > ⚠️ **Note**: The Gemini API key loading is currently not working properly. This is a known issue being investigated. The app will show "API KEY MISSING" error until this is resolved.
 
 3. **Run locally:**
    ```bash
    npm run dev
    ```
-   Opens at `http://localhost:5173`
+   Opens at `https://localhost:3000` (HTTPS required for microphone access)
 
 4. **Build for production:**
    ```bash
