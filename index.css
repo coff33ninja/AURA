@@ -155,3 +155,57 @@ body {
 .volume-bar-3 { height: 13px; }
 .volume-bar-4 { height: 16px; }
 .volume-bar-5 { height: 19px; }
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  /* Smaller HUD panels on mobile */
+  .hud-panel {
+    padding: 4px 8px;
+  }
+  
+  /* Smaller buttons */
+  .hud-button,
+  .hud-button-danger {
+    padding: 8px 16px;
+    font-size: 10px;
+  }
+  
+  /* Smaller select inputs */
+  .hud-select {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+  
+  /* Smaller volume bars */
+  .volume-bar-1 { height: 5px; }
+  .volume-bar-2 { height: 7px; }
+  .volume-bar-3 { height: 9px; }
+  .volume-bar-4 { height: 11px; }
+  .volume-bar-5 { height: 13px; }
+}
+
+/* Touch-friendly tap targets */
+@media (pointer: coarse) {
+  .hud-button,
+  .hud-button-danger {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .hud-select {
+    min-height: 44px;
+  }
+}
+
+/* Landscape mobile - adjust layout */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hud-panel {
+    padding: 2px 6px;
+  }
+  
+  .hud-button,
+  .hud-button-danger {
+    padding: 6px 12px;
+    font-size: 9px;
+  }
+}

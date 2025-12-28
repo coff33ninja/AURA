@@ -30,17 +30,17 @@
 - [x] Add mic volume indicator - now shows both mic input and AI output levels
 
 ### VRM Loading
-- [ ] Handle VRM load errors gracefully with user feedback
-- [ ] Add loading progress indicator (percentage)
+- [x] Handle VRM load errors gracefully with user feedback
+- [x] Add loading progress indicator (percentage)
 - [ ] Preload next/previous models for faster switching
-- [ ] Clean up previous VRM properly on model switch (dispose geometries/materials)
+- [x] Clean up previous VRM properly on model switch (dispose geometries/materials)
 
 ### UI/UX
 - [x] Move inline styles to CSS classes (volume bar heights)
 - [x] Add keyboard shortcuts (Space to connect/disconnect, Esc to close menu)
 - [x] Remember user preferences in localStorage (selected model, voice, personality, mode)
-- [ ] Add fullscreen toggle
-- [ ] Mobile responsive adjustments
+- [x] Add fullscreen toggle
+- [x] Mobile responsive adjustments
 
 ## 🟢 Low Priority / Nice to Have
 
