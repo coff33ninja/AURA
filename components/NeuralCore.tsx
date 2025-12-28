@@ -678,6 +678,54 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         // Update eye tracking
         cameraTrackingRef.current.enabled = bodyConfig.eyeTracking.enabled;
         cameraTrackingRef.current.intensity = bodyConfig.eyeTracking.intensity;
+      } else if (type === 'hands' && behaviors.hands) {
+        // Apply hand/finger config changes in real-time
+        const handsConfig = behaviors.hands;
+        const degToRad = (deg: number) => (deg * Math.PI) / 180;
+        
+        // Map HandsConfig keys to VRM bone names
+        const fingerBones = [
+          'leftThumbProximal', 'leftThumbDistal',
+          'leftIndexProximal', 'leftIndexIntermediate', 'leftIndexDistal',
+          'leftMiddleProximal', 'leftMiddleIntermediate', 'leftMiddleDistal',
+          'leftRingProximal', 'leftRingIntermediate', 'leftRingDistal',
+          'leftLittleProximal', 'leftLittleIntermediate', 'leftLittleDistal',
+          'rightThumbProximal', 'rightThumbDistal',
+          'rightIndexProximal', 'rightIndexIntermediate', 'rightIndexDistal',
+          'rightMiddleProximal', 'rightMiddleIntermediate', 'rightMiddleDistal',
+          'rightRingProximal', 'rightRingIntermediate', 'rightRingDistal',
+          'rightLittleProximal', 'rightLittleIntermediate', 'rightLittleDistal',
+        ] as const;
+        
+        for (const boneName of fingerBones) {
+          const configKey = boneName as keyof typeof handsConfig;
+          if (handsConfig[configKey]) {
+            const boneConfig = handsConfig[configKey];
+            boneTargets.current[boneName] = {
+              x: degToRad(boneConfig.x),
+              y: degToRad(boneConfig.y),
+              z: degToRad(boneConfig.z),
+            };
+          }
+        }
+      } else if (type === 'facial' && behaviors.facial) {
+        // Apply facial expression changes in real-time
+        const facialConfig = behaviors.facial;
+        
+        // Apply expressions
+        for (const [expr, value] of Object.entries(facialConfig.expressions)) {
+          addExpressionTarget(expr, value);
+        }
+        
+        // Apply mouth visemes
+        for (const [viseme, value] of Object.entries(facialConfig.mouth)) {
+          addExpressionTarget(viseme, value);
+        }
+        
+        // Apply eye controls
+        for (const [eye, value] of Object.entries(facialConfig.eyes)) {
+          addExpressionTarget(eye, value);
+        }
       }
       
       console.log('[NeuralCore] Behavior updated:', type);
@@ -1027,7 +1075,23 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
 
             // 4. Apply all bone rotation targets smoothly
             const boneSmoothingSpeed = 5.0; // rad/s
-            const boneNames: VRMHumanBoneName[] = ['spine', 'chest', 'neck', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'leftUpperLeg', 'rightUpperLeg'];
+            const boneNames: VRMHumanBoneName[] = [
+              'spine', 'chest', 'neck', 
+              'leftUpperArm', 'leftLowerArm', 'leftHand', 
+              'rightUpperArm', 'rightLowerArm', 'rightHand', 
+              'leftUpperLeg', 'rightUpperLeg',
+              // Finger bones
+              'leftThumbProximal', 'leftThumbDistal',
+              'leftIndexProximal', 'leftIndexIntermediate', 'leftIndexDistal',
+              'leftMiddleProximal', 'leftMiddleIntermediate', 'leftMiddleDistal',
+              'leftRingProximal', 'leftRingIntermediate', 'leftRingDistal',
+              'leftLittleProximal', 'leftLittleIntermediate', 'leftLittleDistal',
+              'rightThumbProximal', 'rightThumbDistal',
+              'rightIndexProximal', 'rightIndexIntermediate', 'rightIndexDistal',
+              'rightMiddleProximal', 'rightMiddleIntermediate', 'rightMiddleDistal',
+              'rightRingProximal', 'rightRingIntermediate', 'rightRingDistal',
+              'rightLittleProximal', 'rightLittleIntermediate', 'rightLittleDistal',
+            ];
             for (const boneName of boneNames) {
               const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
               const btarget = boneTargets.current[boneName];

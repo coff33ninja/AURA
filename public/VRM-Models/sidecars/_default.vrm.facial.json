@@ -1,0 +1,24 @@
+{
+  "expressions": {
+    "joy": 0,
+    "angry": 0,
+    "sorrow": 0,
+    "fun": 0,
+    "surprised": 0
+  },
+  "mouth": {
+    "a": 0,
+    "i": 0,
+    "u": 0,
+    "e": 0,
+    "o": 0
+  },
+  "eyes": {
+    "blink": 0,
+    "lookUp": 0,
+    "lookDown": 0,
+    "lookLeft": 0,
+    "lookRight": 0
+  },
+  "customPresets": []
+}

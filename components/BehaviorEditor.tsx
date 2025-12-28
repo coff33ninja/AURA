@@ -7,6 +7,8 @@ import {
   ModelBehaviors,
   TransformConfig,
   BodyConfig,
+  HandsConfig,
+  FacialConfig,
   GesturesConfig,
   IdleConfig,
   LipSyncConfig,
@@ -14,6 +16,8 @@ import {
   ExpressionsConfig,
   GestureDefinition,
   ReactionDefinition,
+  BoneRotation,
+  FacialPreset,
 } from '../types/behaviorTypes';
 
 interface BehaviorEditorProps {
@@ -30,11 +34,13 @@ interface BehaviorEditorProps {
   onSave: () => void;
 }
 
-type TabType = 'transform' | 'body' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'import-export';
+type TabType = 'transform' | 'body' | 'hands' | 'facial' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'import-export';
 
 const TABS: { id: TabType; label: string }[] = [
   { id: 'transform', label: 'Transform' },
   { id: 'body', label: 'Body' },
+  { id: 'hands', label: 'Hands' },
+  { id: 'facial', label: 'Facial' },
   { id: 'expressions', label: 'Expressions' },
   { id: 'gestures', label: 'Gestures' },
   { id: 'idle', label: 'Idle' },
@@ -66,6 +72,16 @@ export function BehaviorEditor({
 
   const handleBodyChange = useCallback(
     (config: Partial<BodyConfig>) => onBehaviorChange('body', config),
+    [onBehaviorChange]
+  );
+
+  const handleHandsChange = useCallback(
+    (config: Partial<HandsConfig>) => onBehaviorChange('hands', config),
+    [onBehaviorChange]
+  );
+
+  const handleFacialChange = useCallback(
+    (config: Partial<FacialConfig>) => onBehaviorChange('facial', config),
     [onBehaviorChange]
   );
 
@@ -146,6 +162,29 @@ export function BehaviorEditor({
                 <BodyTab
                   config={behaviors.body}
                   onChange={handleBodyChange}
+                />
+              )}
+              {activeTab === 'hands' && (
+                <HandsTab
+                  config={behaviors.hands}
+                  onChange={handleHandsChange}
+                  onSaveAsGesture={(name: string, bones: Record<string, { x: number; y: number; z: number }>) => {
+                    const newGesture: GestureDefinition = {
+                      name,
+                      enabled: true,
+                      duration: 1.5,
+                      intensity: 1.0,
+                      transitionSpeed: 0.3,
+                      bones,
+                    };
+                    handleGesturesChange({ gestures: [...behaviors.gestures.gestures, newGesture] });
+                  }}
+                />
+              )}
+              {activeTab === 'facial' && (
+                <FacialTab
+                  config={behaviors.facial}
+                  onChange={handleFacialChange}
                 />
               )}
               {activeTab === 'expressions' && (
@@ -673,50 +712,193 @@ function GesturesTab({
   onChange: (config: Partial<GesturesConfig>) => void;
   onPreview: (name: string) => void;
 }) {
-  const toggleGesture = (index: number, enabled: boolean) => {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [newGestureName, setNewGestureName] = useState('');
+
+  const toggleGesture = useCallback((index: number, enabled: boolean) => {
     const gestures = [...config.gestures];
     gestures[index] = { ...gestures[index], enabled };
     onChange({ gestures });
-  };
+  }, [config.gestures, onChange]);
 
-  const updateGesture = (index: number, updates: Partial<GestureDefinition>) => {
+  const updateGesture = useCallback((index: number, updates: Partial<GestureDefinition>) => {
     const gestures = [...config.gestures];
     gestures[index] = { ...gestures[index], ...updates };
     onChange({ gestures });
-  };
+  }, [config.gestures, onChange]);
+
+  const deleteGesture = useCallback((index: number) => {
+    const gestures = [...config.gestures];
+    gestures.splice(index, 1);
+    onChange({ gestures });
+    setEditingIndex(null);
+  }, [config.gestures, onChange]);
+
+  const addNewGesture = useCallback(() => {
+    if (!newGestureName.trim()) return;
+    const newGesture: GestureDefinition = {
+      name: newGestureName.trim(),
+      enabled: true,
+      duration: 1.5,
+      intensity: 1.0,
+      transitionSpeed: 0.3,
+      bones: {},
+    };
+    onChange({ gestures: [...config.gestures, newGesture] });
+    setNewGestureName('');
+    setEditingIndex(config.gestures.length); // Open edit mode for new gesture
+  }, [newGestureName, config.gestures, onChange]);
+
+  const updateGestureBone = useCallback((index: number, boneName: string, axis: 'x' | 'y' | 'z', value: number) => {
+    const gestures = [...config.gestures];
+    const gesture = gestures[index];
+    const currentBone = gesture.bones[boneName] || { x: 0, y: 0, z: 0 };
+    gestures[index] = {
+      ...gesture,
+      bones: {
+        ...gesture.bones,
+        [boneName]: { ...currentBone, [axis]: value },
+      },
+    };
+    onChange({ gestures });
+  }, [config.gestures, onChange]);
+
+  const editingGesture = editingIndex !== null ? config.gestures[editingIndex] : null;
 
   return (
-    <div className="space-y-2">
-      <SectionHeader title="Gestures" />
-      <div className="space-y-1 max-h-64 overflow-y-auto">
-        {config.gestures.map((gesture, index) => (
-          <div
-            key={gesture.name}
-            className={`p-1.5 rounded border ${
-              gesture.enabled
-                ? 'border-cyan-500/30 bg-gray-800/50'
-                : 'border-gray-600/30 bg-gray-800/20 opacity-60'
-            }`}
+    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+      {/* New Gesture */}
+      <div>
+        <SectionHeader title="Add Gesture" />
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={newGestureName}
+            onChange={(e) => setNewGestureName(e.target.value)}
+            placeholder="Gesture name"
+            className="flex-1 px-1 py-0.5 text-[10px] bg-gray-800 border border-gray-600 rounded text-gray-200"
+          />
+          <button
+            onClick={addNewGesture}
+            disabled={!newGestureName.trim()}
+            className="px-2 py-0.5 text-[9px] bg-cyan-700 hover:bg-cyan-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Toggle
-                  label=""
-                  checked={gesture.enabled}
-                  onChange={(enabled) => toggleGesture(index, enabled)}
-                />
-                <span className="text-[10px] font-medium text-gray-200">{gesture.name}</span>
+            + New
+          </button>
+        </div>
+      </div>
+
+      {/* Gesture List */}
+      <div>
+        <SectionHeader title="Gestures" />
+        <div className="space-y-1">
+          {config.gestures.map((gesture, index) => (
+            <div
+              key={gesture.name}
+              className={`rounded border ${
+                gesture.enabled
+                  ? 'border-cyan-500/30 bg-gray-800/50'
+                  : 'border-gray-600/30 bg-gray-800/20 opacity-60'
+              }`}
+            >
+              {/* Gesture Header */}
+              <div className="p-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Toggle
+                    label=""
+                    checked={gesture.enabled}
+                    onChange={(enabled) => toggleGesture(index, enabled)}
+                  />
+                  <span className="text-[10px] font-medium text-gray-200">{gesture.name}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setEditingIndex(editingIndex === index ? null : index)}
+                    className="px-1.5 py-0.5 text-[9px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded"
+                  >
+                    {editingIndex === index ? '▼' : '✎'}
+                  </button>
+                  <button
+                    onClick={() => onPreview(gesture.name)}
+                    disabled={!gesture.enabled}
+                    className="px-1.5 py-0.5 text-[9px] bg-cyan-700 hover:bg-cyan-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
+                  >
+                    ▶
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => onPreview(gesture.name)}
-                disabled={!gesture.enabled}
-                className="px-1.5 py-0.5 text-[9px] bg-cyan-700 hover:bg-cyan-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
-              >
-                ▶
-              </button>
+
+              {/* Edit Mode */}
+              {editingIndex === index && (
+                <div className="px-2 pb-2 border-t border-gray-700/50 pt-2 space-y-2">
+                  {/* Duration & Intensity */}
+                  <Slider
+                    label="Duration"
+                    value={gesture.duration}
+                    min={0.1}
+                    max={5}
+                    step={0.1}
+                    onChange={(duration) => updateGesture(index, { duration })}
+                  />
+                  <Slider
+                    label="Intensity"
+                    value={gesture.intensity}
+                    min={0}
+                    max={1}
+                    onChange={(intensity) => updateGesture(index, { intensity })}
+                  />
+                  <Slider
+                    label="Transition"
+                    value={gesture.transitionSpeed}
+                    min={0.1}
+                    max={1}
+                    step={0.1}
+                    onChange={(transitionSpeed) => updateGesture(index, { transitionSpeed })}
+                  />
+
+                  {/* Bone Controls */}
+                  <div className="text-[9px] text-gray-400 mt-2">Arm Bones</div>
+                  {['leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm'].map((boneName) => {
+                    const bone = gesture.bones[boneName] || { x: 0, y: 0, z: 0 };
+                    return (
+                      <div key={boneName} className="pl-1">
+                        <span className="text-[8px] text-gray-500">{boneName}</span>
+                        <div className="flex gap-1">
+                          <Slider
+                            label="X"
+                            value={bone.x}
+                            min={-1.5}
+                            max={1.5}
+                            step={0.1}
+                            onChange={(v) => updateGestureBone(index, boneName, 'x', v)}
+                          />
+                        </div>
+                        <div className="flex gap-1">
+                          <Slider
+                            label="Z"
+                            value={bone.z}
+                            min={-1.5}
+                            max={1.5}
+                            step={0.1}
+                            onChange={(v) => updateGestureBone(index, boneName, 'z', v)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={() => deleteGesture(index)}
+                    className="w-full mt-2 px-2 py-1 text-[9px] bg-red-700/50 hover:bg-red-600 text-white rounded"
+                  >
+                    Delete Gesture
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -992,6 +1174,515 @@ function ReactionsTab({
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Hands Tab - Finger bone controls
+function HandsTab({
+  config,
+  onChange,
+  onSaveAsGesture,
+}: {
+  config: HandsConfig;
+  onChange: (config: Partial<HandsConfig>) => void;
+  onSaveAsGesture?: (name: string, bones: Record<string, { x: number; y: number; z: number }>) => void;
+}) {
+  const [expandedHand, setExpandedHand] = useState<'left' | 'right' | null>('left');
+  const [expandedFinger, setExpandedFinger] = useState<string | null>(null);
+  const [gestureName, setGestureName] = useState('');
+
+  // Finger bone update callbacks
+  const updateBone = useCallback((boneName: keyof HandsConfig, axis: 'x' | 'y' | 'z', value: number) => {
+    const currentBone = config[boneName] as BoneRotation;
+    onChange({
+      [boneName]: {
+        x: currentBone.x,
+        y: currentBone.y,
+        z: currentBone.z,
+        [axis]: value,
+      },
+    });
+  }, [config, onChange]);
+
+  // Save current hand config as a gesture
+  const saveAsGesture = useCallback(() => {
+    if (!gestureName.trim() || !onSaveAsGesture) return;
+    
+    // Convert degrees to radians for gesture bones
+    const degToRad = (deg: number) => (deg * Math.PI) / 180;
+    const bones: Record<string, { x: number; y: number; z: number }> = {};
+    
+    // Collect all non-zero finger bones
+    const fingerBones = [
+      'leftThumbProximal', 'leftThumbDistal',
+      'leftIndexProximal', 'leftIndexIntermediate', 'leftIndexDistal',
+      'leftMiddleProximal', 'leftMiddleIntermediate', 'leftMiddleDistal',
+      'leftRingProximal', 'leftRingIntermediate', 'leftRingDistal',
+      'leftLittleProximal', 'leftLittleIntermediate', 'leftLittleDistal',
+      'rightThumbProximal', 'rightThumbDistal',
+      'rightIndexProximal', 'rightIndexIntermediate', 'rightIndexDistal',
+      'rightMiddleProximal', 'rightMiddleIntermediate', 'rightMiddleDistal',
+      'rightRingProximal', 'rightRingIntermediate', 'rightRingDistal',
+      'rightLittleProximal', 'rightLittleIntermediate', 'rightLittleDistal',
+    ] as const;
+    
+    for (const boneName of fingerBones) {
+      const boneConfig = config[boneName as keyof HandsConfig] as BoneRotation;
+      if (boneConfig.x !== 0 || boneConfig.y !== 0 || boneConfig.z !== 0) {
+        bones[boneName] = {
+          x: degToRad(boneConfig.x),
+          y: degToRad(boneConfig.y),
+          z: degToRad(boneConfig.z),
+        };
+      }
+    }
+    
+    onSaveAsGesture(gestureName.trim(), bones);
+    setGestureName('');
+  }, [gestureName, config, onSaveAsGesture]);
+
+  // Hand presets
+  const applyPreset = useCallback((preset: 'open' | 'fist' | 'point' | 'peace' | 'grip' | 'thumbsUp', hand: 'left' | 'right') => {
+    const prefix = hand === 'left' ? 'left' : 'right';
+    const presets: Record<string, Partial<HandsConfig>> = {
+      open: {
+        [`${prefix}ThumbProximal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}ThumbDistal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}IndexProximal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}IndexIntermediate`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}IndexDistal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}MiddleProximal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}MiddleIntermediate`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}MiddleDistal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}RingProximal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}RingIntermediate`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}RingDistal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}LittleProximal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}LittleIntermediate`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}LittleDistal`]: { x: 0, y: 0, z: 0 },
+      },
+      fist: {
+        [`${prefix}ThumbProximal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}ThumbDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}IndexProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}IndexIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}IndexDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}MiddleProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}MiddleIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}MiddleDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}RingProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}RingIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}RingDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}LittleProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}LittleIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}LittleDistal`]: { x: 45, y: 0, z: 0 },
+      },
+      point: {
+        [`${prefix}ThumbProximal`]: { x: 30, y: 0, z: 0 },
+        [`${prefix}ThumbDistal`]: { x: 30, y: 0, z: 0 },
+        [`${prefix}IndexProximal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}IndexIntermediate`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}IndexDistal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}MiddleProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}MiddleIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}MiddleDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}RingProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}RingIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}RingDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}LittleProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}LittleIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}LittleDistal`]: { x: 45, y: 0, z: 0 },
+      },
+      peace: {
+        [`${prefix}ThumbProximal`]: { x: 30, y: 0, z: 0 },
+        [`${prefix}ThumbDistal`]: { x: 30, y: 0, z: 0 },
+        [`${prefix}IndexProximal`]: { x: 0, y: 0, z: -10 },
+        [`${prefix}IndexIntermediate`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}IndexDistal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}MiddleProximal`]: { x: 0, y: 0, z: 10 },
+        [`${prefix}MiddleIntermediate`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}MiddleDistal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}RingProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}RingIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}RingDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}LittleProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}LittleIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}LittleDistal`]: { x: 45, y: 0, z: 0 },
+      },
+      grip: {
+        [`${prefix}ThumbProximal`]: { x: 30, y: 0, z: 0 },
+        [`${prefix}ThumbDistal`]: { x: 20, y: 0, z: 0 },
+        [`${prefix}IndexProximal`]: { x: 60, y: 0, z: 0 },
+        [`${prefix}IndexIntermediate`]: { x: 60, y: 0, z: 0 },
+        [`${prefix}IndexDistal`]: { x: 30, y: 0, z: 0 },
+        [`${prefix}MiddleProximal`]: { x: 60, y: 0, z: 0 },
+        [`${prefix}MiddleIntermediate`]: { x: 60, y: 0, z: 0 },
+        [`${prefix}MiddleDistal`]: { x: 30, y: 0, z: 0 },
+        [`${prefix}RingProximal`]: { x: 60, y: 0, z: 0 },
+        [`${prefix}RingIntermediate`]: { x: 60, y: 0, z: 0 },
+        [`${prefix}RingDistal`]: { x: 30, y: 0, z: 0 },
+        [`${prefix}LittleProximal`]: { x: 60, y: 0, z: 0 },
+        [`${prefix}LittleIntermediate`]: { x: 60, y: 0, z: 0 },
+        [`${prefix}LittleDistal`]: { x: 30, y: 0, z: 0 },
+      },
+      thumbsUp: {
+        [`${prefix}ThumbProximal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}ThumbDistal`]: { x: 0, y: 0, z: 0 },
+        [`${prefix}IndexProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}IndexIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}IndexDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}MiddleProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}MiddleIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}MiddleDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}RingProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}RingIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}RingDistal`]: { x: 45, y: 0, z: 0 },
+        [`${prefix}LittleProximal`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}LittleIntermediate`]: { x: 90, y: 0, z: 0 },
+        [`${prefix}LittleDistal`]: { x: 45, y: 0, z: 0 },
+      },
+    };
+    onChange(presets[preset] as Partial<HandsConfig>);
+  }, [onChange]);
+
+  const fingers = ['Thumb', 'Index', 'Middle', 'Ring', 'Little'] as const;
+  const bones = ['Proximal', 'Intermediate', 'Distal'] as const;
+
+  const renderFingerSliders = (hand: 'left' | 'right', finger: typeof fingers[number]) => {
+    const prefix = hand === 'left' ? 'left' : 'right';
+    const fingerKey = `${prefix}${finger}`;
+    const isExpanded = expandedFinger === fingerKey;
+
+    return (
+      <div key={fingerKey} className="mb-1">
+        <button
+          onClick={() => setExpandedFinger(isExpanded ? null : fingerKey)}
+          className="w-full flex items-center justify-between px-2 py-1 text-[9px] bg-gray-700/50 hover:bg-gray-700 rounded"
+        >
+          <span className="text-gray-200">{finger}</span>
+          <span className="text-gray-400">{isExpanded ? '▼' : '▶'}</span>
+        </button>
+        {isExpanded && (
+          <div className="pl-2 pt-1">
+            {bones.map((bone) => {
+              // Thumb only has Proximal and Distal
+              if (finger === 'Thumb' && bone === 'Intermediate') return null;
+              const boneName = `${prefix}${finger}${bone}` as keyof HandsConfig;
+              const boneConfig = config[boneName] as BoneRotation;
+              return (
+                <div key={bone} className="mb-1">
+                  <span className="text-[8px] text-gray-400">{bone}</span>
+                  <Slider
+                    label="Curl"
+                    value={boneConfig.x}
+                    min={-30}
+                    max={90}
+                    step={1}
+                    onChange={(v) => updateBone(boneName, 'x', v)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+      {/* Hand selector */}
+      <div className="flex gap-1">
+        <button
+          onClick={() => setExpandedHand('left')}
+          className={`flex-1 px-2 py-1 text-[10px] rounded ${
+            expandedHand === 'left' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-200'
+          }`}
+        >
+          Left Hand
+        </button>
+        <button
+          onClick={() => setExpandedHand('right')}
+          className={`flex-1 px-2 py-1 text-[10px] rounded ${
+            expandedHand === 'right' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-200'
+          }`}
+        >
+          Right Hand
+        </button>
+      </div>
+
+      {/* Presets */}
+      <div>
+        <SectionHeader title="Presets" />
+        <div className="flex gap-1 flex-wrap">
+          {(['open', 'fist', 'point', 'peace', 'grip', 'thumbsUp'] as const).map((preset) => (
+            <button
+              key={preset}
+              onClick={() => expandedHand && applyPreset(preset, expandedHand)}
+              className="px-2 py-0.5 text-[9px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
+            >
+              {preset.charAt(0).toUpperCase() + preset.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Finger controls */}
+      {expandedHand && (
+        <div>
+          <SectionHeader title={`${expandedHand === 'left' ? 'Left' : 'Right'} Fingers`} />
+          {fingers.map((finger) => renderFingerSliders(expandedHand, finger))}
+        </div>
+      )}
+
+      {/* Save as Gesture */}
+      {onSaveAsGesture && (
+        <div>
+          <SectionHeader title="Save as Gesture" />
+          <div className="flex gap-1">
+            <input
+              type="text"
+              value={gestureName}
+              onChange={(e) => setGestureName(e.target.value)}
+              placeholder="Gesture name"
+              className="flex-1 px-1 py-0.5 text-[10px] bg-gray-800 border border-gray-600 rounded text-gray-200"
+            />
+            <button
+              onClick={saveAsGesture}
+              disabled={!gestureName.trim()}
+              className="px-2 py-0.5 text-[9px] bg-cyan-700 hover:bg-cyan-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Facial Tab - Expression and mouth controls
+function FacialTab({
+  config,
+  onChange,
+}: {
+  config: FacialConfig;
+  onChange: (config: Partial<FacialConfig>) => void;
+}) {
+  const [presetName, setPresetName] = useState('');
+
+  // Expression update callbacks
+  const updateExpression = useCallback((expr: keyof FacialConfig['expressions'], value: number) => {
+    onChange({
+      expressions: {
+        ...config.expressions,
+        [expr]: value,
+      },
+    });
+  }, [config.expressions, onChange]);
+
+  const updateMouth = useCallback((viseme: keyof FacialConfig['mouth'], value: number) => {
+    onChange({
+      mouth: {
+        ...config.mouth,
+        [viseme]: value,
+      },
+    });
+  }, [config.mouth, onChange]);
+
+  const updateEyes = useCallback((eye: keyof FacialConfig['eyes'], value: number) => {
+    onChange({
+      eyes: {
+        ...config.eyes,
+        [eye]: value,
+      },
+    });
+  }, [config.eyes, onChange]);
+
+  // Facial presets
+  const applyPreset = useCallback((preset: 'happy' | 'sad' | 'angry' | 'surprised' | 'neutral') => {
+    const presets: Record<string, Partial<FacialConfig>> = {
+      happy: {
+        expressions: { joy: 0.8, angry: 0, sorrow: 0, fun: 0.5, surprised: 0 },
+        mouth: { a: 0.3, i: 0, u: 0, e: 0, o: 0 },
+        eyes: { blink: 0, lookUp: 0, lookDown: 0, lookLeft: 0, lookRight: 0 },
+      },
+      sad: {
+        expressions: { joy: 0, angry: 0, sorrow: 0.8, fun: 0, surprised: 0 },
+        mouth: { a: 0, i: 0, u: 0.2, e: 0, o: 0 },
+        eyes: { blink: 0.2, lookUp: 0, lookDown: 0.3, lookLeft: 0, lookRight: 0 },
+      },
+      angry: {
+        expressions: { joy: 0, angry: 0.8, sorrow: 0, fun: 0, surprised: 0 },
+        mouth: { a: 0.2, i: 0.3, u: 0, e: 0, o: 0 },
+        eyes: { blink: 0, lookUp: 0, lookDown: 0.2, lookLeft: 0, lookRight: 0 },
+      },
+      surprised: {
+        expressions: { joy: 0, angry: 0, sorrow: 0, fun: 0, surprised: 0.9 },
+        mouth: { a: 0, i: 0, u: 0, e: 0, o: 0.6 },
+        eyes: { blink: 0, lookUp: 0.2, lookDown: 0, lookLeft: 0, lookRight: 0 },
+      },
+      neutral: {
+        expressions: { joy: 0, angry: 0, sorrow: 0, fun: 0, surprised: 0 },
+        mouth: { a: 0, i: 0, u: 0, e: 0, o: 0 },
+        eyes: { blink: 0, lookUp: 0, lookDown: 0, lookLeft: 0, lookRight: 0 },
+      },
+    };
+    onChange(presets[preset]);
+  }, [onChange]);
+
+  // Save current as custom preset
+  const saveAsPreset = useCallback(() => {
+    if (!presetName.trim()) return;
+    const values: Record<string, number> = {};
+    // Collect non-zero values
+    Object.entries(config.expressions).forEach(([k, v]) => {
+      if (v > 0) values[`expr_${k}`] = v;
+    });
+    Object.entries(config.mouth).forEach(([k, v]) => {
+      if (v > 0) values[`mouth_${k}`] = v;
+    });
+    Object.entries(config.eyes).forEach(([k, v]) => {
+      if (v > 0) values[`eyes_${k}`] = v;
+    });
+    const newPreset: FacialPreset = { name: presetName.trim(), values };
+    onChange({
+      customPresets: [...config.customPresets, newPreset],
+    });
+    setPresetName('');
+  }, [presetName, config, onChange]);
+
+  // Apply custom preset
+  const applyCustomPreset = useCallback((preset: FacialPreset) => {
+    const expressions = { ...config.expressions };
+    const mouth = { ...config.mouth };
+    const eyes = { ...config.eyes };
+    Object.entries(preset.values).forEach(([k, v]) => {
+      if (k.startsWith('expr_')) {
+        const key = k.replace('expr_', '') as keyof FacialConfig['expressions'];
+        expressions[key] = v;
+      } else if (k.startsWith('mouth_')) {
+        const key = k.replace('mouth_', '') as keyof FacialConfig['mouth'];
+        mouth[key] = v;
+      } else if (k.startsWith('eyes_')) {
+        const key = k.replace('eyes_', '') as keyof FacialConfig['eyes'];
+        eyes[key] = v;
+      }
+    });
+    onChange({ expressions, mouth, eyes });
+  }, [config, onChange]);
+
+  // Delete custom preset
+  const deleteCustomPreset = useCallback((index: number) => {
+    const customPresets = [...config.customPresets];
+    customPresets.splice(index, 1);
+    onChange({ customPresets });
+  }, [config.customPresets, onChange]);
+
+  return (
+    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+      {/* Quick presets */}
+      <div>
+        <SectionHeader title="Presets" />
+        <div className="flex gap-1 flex-wrap">
+          {(['happy', 'sad', 'angry', 'surprised', 'neutral'] as const).map((preset) => (
+            <button
+              key={preset}
+              onClick={() => applyPreset(preset)}
+              className="px-2 py-0.5 text-[9px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
+            >
+              {preset.charAt(0).toUpperCase() + preset.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Expressions */}
+      <div>
+        <SectionHeader title="Expressions" />
+        {(Object.keys(config.expressions) as Array<keyof FacialConfig['expressions']>).map((expr) => (
+          <Slider
+            key={expr}
+            label={expr.charAt(0).toUpperCase() + expr.slice(1)}
+            value={config.expressions[expr]}
+            min={0}
+            max={1}
+            onChange={(v) => updateExpression(expr, v)}
+          />
+        ))}
+      </div>
+
+      {/* Mouth */}
+      <div>
+        <SectionHeader title="Mouth (Visemes)" />
+        {(Object.keys(config.mouth) as Array<keyof FacialConfig['mouth']>).map((viseme) => (
+          <Slider
+            key={viseme}
+            label={viseme.toUpperCase()}
+            value={config.mouth[viseme]}
+            min={0}
+            max={1}
+            onChange={(v) => updateMouth(viseme, v)}
+          />
+        ))}
+      </div>
+
+      {/* Eyes */}
+      <div>
+        <SectionHeader title="Eyes" />
+        {(Object.keys(config.eyes) as Array<keyof FacialConfig['eyes']>).map((eye) => (
+          <Slider
+            key={eye}
+            label={eye.replace(/([A-Z])/g, ' $1').trim()}
+            value={config.eyes[eye]}
+            min={0}
+            max={1}
+            onChange={(v) => updateEyes(eye, v)}
+          />
+        ))}
+      </div>
+
+      {/* Custom presets */}
+      <div>
+        <SectionHeader title="Custom Presets" />
+        {config.customPresets.length > 0 && (
+          <div className="flex gap-1 flex-wrap mb-2">
+            {config.customPresets.map((preset, index) => (
+              <div key={preset.name} className="flex items-center gap-0.5">
+                <button
+                  onClick={() => applyCustomPreset(preset)}
+                  className="px-2 py-0.5 text-[9px] bg-cyan-700/50 hover:bg-cyan-600 text-gray-200 rounded-l transition-colors"
+                >
+                  {preset.name}
+                </button>
+                <button
+                  onClick={() => deleteCustomPreset(index)}
+                  className="px-1 py-0.5 text-[9px] bg-red-700/50 hover:bg-red-600 text-gray-200 rounded-r transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            placeholder="Preset name"
+            className="flex-1 px-1 py-0.5 text-[10px] bg-gray-800 border border-gray-600 rounded text-gray-200"
+          />
+          <button
+            onClick={saveAsPreset}
+            disabled={!presetName.trim()}
+            className="px-2 py-0.5 text-[9px] bg-cyan-700 hover:bg-cyan-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded"
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>
   );

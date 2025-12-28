@@ -3,7 +3,7 @@
 /**
  * All behavior configuration types
  */
-export type BehaviorType = 'transform' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'body';
+export type BehaviorType = 'transform' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'body' | 'hands' | 'facial';
 
 /**
  * Transform configuration - position, rotation, scale on screen
@@ -41,6 +41,93 @@ export interface BodyConfig {
     enabled: boolean;
     intensity: number; // 0-1
   };
+}
+
+/**
+ * 3D rotation for a single bone (degrees)
+ */
+export interface BoneRotation {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
+ * Hand/Finger configuration - individual finger bone positions
+ * All values in degrees. X = curl, Y = spread, Z = twist
+ */
+export interface HandsConfig {
+  // Left hand fingers
+  leftThumbProximal: BoneRotation;
+  leftThumbDistal: BoneRotation;
+  leftIndexProximal: BoneRotation;
+  leftIndexIntermediate: BoneRotation;
+  leftIndexDistal: BoneRotation;
+  leftMiddleProximal: BoneRotation;
+  leftMiddleIntermediate: BoneRotation;
+  leftMiddleDistal: BoneRotation;
+  leftRingProximal: BoneRotation;
+  leftRingIntermediate: BoneRotation;
+  leftRingDistal: BoneRotation;
+  leftLittleProximal: BoneRotation;
+  leftLittleIntermediate: BoneRotation;
+  leftLittleDistal: BoneRotation;
+  // Right hand fingers
+  rightThumbProximal: BoneRotation;
+  rightThumbDistal: BoneRotation;
+  rightIndexProximal: BoneRotation;
+  rightIndexIntermediate: BoneRotation;
+  rightIndexDistal: BoneRotation;
+  rightMiddleProximal: BoneRotation;
+  rightMiddleIntermediate: BoneRotation;
+  rightMiddleDistal: BoneRotation;
+  rightRingProximal: BoneRotation;
+  rightRingIntermediate: BoneRotation;
+  rightRingDistal: BoneRotation;
+  rightLittleProximal: BoneRotation;
+  rightLittleIntermediate: BoneRotation;
+  rightLittleDistal: BoneRotation;
+}
+
+/**
+ * Custom facial preset definition
+ */
+export interface FacialPreset {
+  name: string;
+  values: Record<string, number>;
+}
+
+/**
+ * Facial configuration - expressions, mouth, and eye controls
+ * All values 0-1 intensity
+ */
+export interface FacialConfig {
+  // Standard VRM expressions
+  expressions: {
+    joy: number;
+    angry: number;
+    sorrow: number;
+    fun: number;
+    surprised: number;
+  };
+  // Mouth visemes for lip sync
+  mouth: {
+    a: number;
+    i: number;
+    u: number;
+    e: number;
+    o: number;
+  };
+  // Eye controls
+  eyes: {
+    blink: number;
+    lookUp: number;
+    lookDown: number;
+    lookLeft: number;
+    lookRight: number;
+  };
+  // User-created presets
+  customPresets: FacialPreset[];
 }
 
 /**
@@ -156,6 +243,8 @@ export interface ModelBehaviors {
   version: string; // for import/export compatibility
   transform: TransformConfig;
   body: BodyConfig;
+  hands: HandsConfig;
+  facial: FacialConfig;
   expressions: ExpressionsConfig;
   gestures: GesturesConfig;
   idle: IdleConfig;
@@ -169,6 +258,8 @@ export interface ModelBehaviors {
 export interface BehaviorConfigs {
   transform: TransformConfig;
   body: BodyConfig;
+  hands: HandsConfig;
+  facial: FacialConfig;
   expressions: ExpressionsConfig;
   gestures: GesturesConfig;
   idle: IdleConfig;
@@ -208,6 +299,66 @@ export const DEFAULT_BODY: BodyConfig = {
   eyeTracking: { enabled: true, intensity: 0.7 },
 };
 
+const ZERO_ROTATION: BoneRotation = { x: 0, y: 0, z: 0 };
+
+export const DEFAULT_HANDS: HandsConfig = {
+  // Left hand - all fingers at neutral
+  leftThumbProximal: { ...ZERO_ROTATION },
+  leftThumbDistal: { ...ZERO_ROTATION },
+  leftIndexProximal: { ...ZERO_ROTATION },
+  leftIndexIntermediate: { ...ZERO_ROTATION },
+  leftIndexDistal: { ...ZERO_ROTATION },
+  leftMiddleProximal: { ...ZERO_ROTATION },
+  leftMiddleIntermediate: { ...ZERO_ROTATION },
+  leftMiddleDistal: { ...ZERO_ROTATION },
+  leftRingProximal: { ...ZERO_ROTATION },
+  leftRingIntermediate: { ...ZERO_ROTATION },
+  leftRingDistal: { ...ZERO_ROTATION },
+  leftLittleProximal: { ...ZERO_ROTATION },
+  leftLittleIntermediate: { ...ZERO_ROTATION },
+  leftLittleDistal: { ...ZERO_ROTATION },
+  // Right hand - all fingers at neutral
+  rightThumbProximal: { ...ZERO_ROTATION },
+  rightThumbDistal: { ...ZERO_ROTATION },
+  rightIndexProximal: { ...ZERO_ROTATION },
+  rightIndexIntermediate: { ...ZERO_ROTATION },
+  rightIndexDistal: { ...ZERO_ROTATION },
+  rightMiddleProximal: { ...ZERO_ROTATION },
+  rightMiddleIntermediate: { ...ZERO_ROTATION },
+  rightMiddleDistal: { ...ZERO_ROTATION },
+  rightRingProximal: { ...ZERO_ROTATION },
+  rightRingIntermediate: { ...ZERO_ROTATION },
+  rightRingDistal: { ...ZERO_ROTATION },
+  rightLittleProximal: { ...ZERO_ROTATION },
+  rightLittleIntermediate: { ...ZERO_ROTATION },
+  rightLittleDistal: { ...ZERO_ROTATION },
+};
+
+export const DEFAULT_FACIAL: FacialConfig = {
+  expressions: {
+    joy: 0,
+    angry: 0,
+    sorrow: 0,
+    fun: 0,
+    surprised: 0,
+  },
+  mouth: {
+    a: 0,
+    i: 0,
+    u: 0,
+    e: 0,
+    o: 0,
+  },
+  eyes: {
+    blink: 0,
+    lookUp: 0,
+    lookDown: 0,
+    lookLeft: 0,
+    lookRight: 0,
+  },
+  customPresets: [],
+};
+
 export const DEFAULT_GESTURES: GesturesConfig = {
   gestures: [],
 };
@@ -242,6 +393,8 @@ export function getDefaultConfig<T extends BehaviorType>(type: T): BehaviorConfi
   const defaults: Record<BehaviorType, any> = {
     transform: DEFAULT_TRANSFORM,
     body: DEFAULT_BODY,
+    hands: DEFAULT_HANDS,
+    facial: DEFAULT_FACIAL,
     expressions: DEFAULT_EXPRESSIONS,
     gestures: DEFAULT_GESTURES,
     idle: DEFAULT_IDLE,
@@ -260,6 +413,8 @@ export function createDefaultModelBehaviors(modelName: string): ModelBehaviors {
     version: '1.0.0',
     transform: { ...DEFAULT_TRANSFORM },
     body: { ...DEFAULT_BODY },
+    hands: { ...DEFAULT_HANDS },
+    facial: { ...DEFAULT_FACIAL },
     expressions: { ...DEFAULT_EXPRESSIONS },
     gestures: { ...DEFAULT_GESTURES },
     idle: { ...DEFAULT_IDLE },
@@ -355,5 +510,28 @@ export function isValidBodyConfig(config: unknown): config is BodyConfig {
     typeof c.leftUpperArm === 'object' &&
     typeof c.rightUpperArm === 'object' &&
     typeof c.eyeTracking === 'object'
+  );
+}
+
+export function isValidHandsConfig(config: unknown): config is HandsConfig {
+  if (!config || typeof config !== 'object') return false;
+  const c = config as Record<string, unknown>;
+  // Check a few key finger bones exist
+  return (
+    typeof c.leftIndexProximal === 'object' &&
+    typeof c.rightIndexProximal === 'object' &&
+    typeof c.leftThumbProximal === 'object' &&
+    typeof c.rightThumbProximal === 'object'
+  );
+}
+
+export function isValidFacialConfig(config: unknown): config is FacialConfig {
+  if (!config || typeof config !== 'object') return false;
+  const c = config as Record<string, unknown>;
+  return (
+    typeof c.expressions === 'object' &&
+    typeof c.mouth === 'object' &&
+    typeof c.eyes === 'object' &&
+    Array.isArray(c.customPresets)
   );
 }

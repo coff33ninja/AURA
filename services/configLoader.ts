@@ -7,6 +7,8 @@ import {
   ModelBehaviors,
   TransformConfig,
   BodyConfig,
+  HandsConfig,
+  FacialConfig,
   GesturesConfig,
   IdleConfig,
   LipSyncConfig,
@@ -16,6 +18,8 @@ import {
   deepMergeConfig,
   isValidTransformConfig,
   isValidBodyConfig,
+  isValidHandsConfig,
+  isValidFacialConfig,
   isValidGesturesConfig,
   isValidIdleConfig,
   isValidLipSyncConfig,
@@ -53,12 +57,16 @@ function getCacheKey(modelName: string, type: BehaviorType): string {
 /**
  * Validate a config based on its type
  */
-function validateConfig(type: BehaviorType, config: unknown): boolean {
+export function validateConfig(type: BehaviorType, config: unknown): boolean {
   switch (type) {
     case 'transform':
       return isValidTransformConfig(config);
     case 'body':
       return isValidBodyConfig(config);
+    case 'hands':
+      return isValidHandsConfig(config);
+    case 'facial':
+      return isValidFacialConfig(config);
     case 'gestures':
       return isValidGesturesConfig(config);
     case 'idle':
@@ -137,7 +145,7 @@ export async function loadConfig<T extends BehaviorType>(
  * Load all configs for a model in parallel
  */
 export async function loadAllConfigs(modelName: string): Promise<ModelBehaviors> {
-  const types: BehaviorType[] = ['transform', 'body', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
+  const types: BehaviorType[] = ['transform', 'body', 'hands', 'facial', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
   
   const results = await Promise.all(
     types.map(type => loadConfig(modelName, type))
@@ -148,11 +156,13 @@ export async function loadAllConfigs(modelName: string): Promise<ModelBehaviors>
     version: '1.0.0',
     transform: results[0] as TransformConfig,
     body: results[1] as BodyConfig,
-    expressions: results[2] as ExpressionsConfig,
-    gestures: results[3] as GesturesConfig,
-    idle: results[4] as IdleConfig,
-    lipsync: results[5] as LipSyncConfig,
-    reactions: results[6] as ReactionsConfig,
+    hands: results[2] as HandsConfig,
+    facial: results[3] as FacialConfig,
+    expressions: results[4] as ExpressionsConfig,
+    gestures: results[5] as GesturesConfig,
+    idle: results[6] as IdleConfig,
+    lipsync: results[7] as LipSyncConfig,
+    reactions: results[8] as ReactionsConfig,
   };
 }
 
@@ -180,7 +190,7 @@ export function clearCache(): void {
  * Clear cache for a specific model
  */
 export function clearModelCache(modelName: string): void {
-  const types: BehaviorType[] = ['transform', 'body', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
+  const types: BehaviorType[] = ['transform', 'body', 'hands', 'facial', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
   for (const type of types) {
     configCache.delete(getCacheKey(modelName, type));
   }
