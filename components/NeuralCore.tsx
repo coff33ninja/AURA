@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { VRMLoaderPlugin, VRMUtils, VRM } from '@pixiv/three-vrm';
+import { VRMLoaderPlugin, VRM, VRMHumanBoneName, VRMUtils } from '@pixiv/three-vrm';
 import type { VrmCommand } from '../services/liveManager';
 
 interface NeuralCoreProps {
@@ -802,7 +802,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
 
             // 4. Apply all bone rotation targets smoothly
             const boneSmoothingSpeed = 5.0; // rad/s
-            const boneNames = ['spine', 'chest', 'neck', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'leftUpperLeg', 'rightUpperLeg'];
+            const boneNames: VRMHumanBoneName[] = ['spine', 'chest', 'neck', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand', 'leftUpperLeg', 'rightUpperLeg'];
             for (const boneName of boneNames) {
               const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
               const btarget = boneTargets.current[boneName];
