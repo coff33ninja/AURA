@@ -8,7 +8,7 @@ export type WalkingStyle = 'casual' | 'march' | 'sneak' | 'run';
 /**
  * Walking direction - preset directions or custom angle
  */
-export type WalkingDirection = 'forward' | 'backward' | 'strafeLeft' | 'strafeRight' | 'custom';
+export type WalkingDirection = 'forward' | 'backward' | 'strafeLeft' | 'strafeRight' | 'faceDirection' | 'custom';
 
 /**
  * Leg bone configuration
@@ -115,13 +115,22 @@ export const WALKING_PRESETS: Record<WalkingStyle, Partial<WalkingBehaviorConfig
 
 /**
  * Convert direction preset to angle in degrees
+ * @param direction - Direction preset
+ * @param customAngle - Custom angle (used when direction is 'custom')
+ * @param facingAngle - Model's current facing angle in radians (used when direction is 'faceDirection')
  */
-export function directionToAngle(direction: WalkingDirection, customAngle: number = 0): number {
+export function directionToAngle(direction: WalkingDirection, customAngle: number = 0, facingAngle: number = 0): number {
   switch (direction) {
     case 'forward': return 0;      // Toward camera
     case 'backward': return 180;   // Away from camera
     case 'strafeLeft': return 270; // Left
     case 'strafeRight': return 90; // Right
+    case 'faceDirection': 
+      // Convert facing angle (radians) to walking angle (degrees)
+      // Model facing angle: 0 = facing +Z (away from camera), Math.PI = facing -Z (toward camera)
+      // Walking angle: 0 = toward camera, 180 = away from camera
+      // So we need to convert: facingAngle of Math.PI -> walking angle of 0
+      return ((facingAngle * 180 / Math.PI) + 180) % 360;
     case 'custom': return customAngle;
     default: return 0;
   }
@@ -203,6 +212,7 @@ export function isValidWalkingDirection(direction: unknown): direction is Walkin
     direction === 'backward' ||
     direction === 'strafeLeft' ||
     direction === 'strafeRight' ||
+    direction === 'faceDirection' ||
     direction === 'custom'
   );
 }

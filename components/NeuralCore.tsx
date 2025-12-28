@@ -1245,7 +1245,9 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
               const moveSpeed = walkStateRef.current.speed * 0.5 * delta;
               
               // Calculate movement angle (convert direction preset to angle, or use custom angle)
-              const moveAngle = directionToAngle(walkConfig.direction, walkConfig.angle);
+              // Pass the model's current facing angle for 'faceDirection' mode
+              const facingAngle = bodyRotationRef.current.y;
+              const moveAngle = directionToAngle(walkConfig.direction, walkConfig.angle, facingAngle);
               const moveVector = angleToMovementVector(moveAngle);
               
               // Apply horizontal movement (X and Z based on angle)

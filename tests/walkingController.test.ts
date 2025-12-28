@@ -30,7 +30,7 @@ import {
 
 // Arbitrary generators for walking types
 const walkingStyleArb = fc.constantFrom<WalkingStyle>('casual', 'march', 'sneak', 'run');
-const walkingDirectionArb = fc.constantFrom<WalkingDirection>('forward', 'backward', 'strafeLeft', 'strafeRight', 'custom');
+const walkingDirectionArb = fc.constantFrom<WalkingDirection>('forward', 'backward', 'strafeLeft', 'strafeRight', 'faceDirection', 'custom');
 
 const legConfigArb = fc.record({
   strideLength: fc.float({ min: Math.fround(0), max: Math.fround(1), noNaN: true }),
@@ -433,16 +433,30 @@ describe('Walking Controller', () => {
 
   describe('directionToAngle', () => {
     it('converts preset directions to correct angles', () => {
-      expect(directionToAngle('forward', 0)).toBe(0);
-      expect(directionToAngle('backward', 0)).toBe(180);
-      expect(directionToAngle('strafeLeft', 0)).toBe(270);
-      expect(directionToAngle('strafeRight', 0)).toBe(90);
+      expect(directionToAngle('forward', 0, 0)).toBe(0);
+      expect(directionToAngle('backward', 0, 0)).toBe(180);
+      expect(directionToAngle('strafeLeft', 0, 0)).toBe(270);
+      expect(directionToAngle('strafeRight', 0, 0)).toBe(90);
     });
 
     it('returns custom angle for custom direction', () => {
-      expect(directionToAngle('custom', 45)).toBe(45);
-      expect(directionToAngle('custom', 135)).toBe(135);
-      expect(directionToAngle('custom', 225)).toBe(225);
+      expect(directionToAngle('custom', 45, 0)).toBe(45);
+      expect(directionToAngle('custom', 135, 0)).toBe(135);
+      expect(directionToAngle('custom', 225, 0)).toBe(225);
+    });
+
+    it('uses facing angle for faceDirection mode', () => {
+      // Model facing toward camera (Math.PI radians) should walk toward camera (0 degrees)
+      expect(directionToAngle('faceDirection', 0, Math.PI)).toBeCloseTo(0, 0);
+      
+      // Model facing away from camera (0 radians) should walk away (180 degrees)
+      expect(directionToAngle('faceDirection', 0, 0)).toBeCloseTo(180, 0);
+      
+      // Model facing right (Math.PI/2 radians) should walk right (90 degrees)
+      expect(directionToAngle('faceDirection', 0, Math.PI / 2)).toBeCloseTo(270, 0);
+      
+      // Model facing left (-Math.PI/2 or 3*Math.PI/2 radians) should walk left (270 degrees)
+      expect(directionToAngle('faceDirection', 0, -Math.PI / 2)).toBeCloseTo(90, 0);
     });
   });
 

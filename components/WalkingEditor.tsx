@@ -169,7 +169,8 @@ export function WalkingEditor({
     { value: 'backward', label: '↓ Back' },
     { value: 'strafeLeft', label: '← Left' },
     { value: 'strafeRight', label: '→ Right' },
-    { value: 'custom', label: '⟳ Custom' },
+    { value: 'faceDirection', label: '👁 Face' },
+    { value: 'custom', label: '⟳ Angle' },
   ];
   const styles: WalkingStyle[] = ['casual', 'march', 'sneak', 'run'];
 
