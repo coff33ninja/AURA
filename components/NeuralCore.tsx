@@ -21,7 +21,6 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
   const clockRef = useRef<THREE.Clock>(new THREE.Clock());
 
   // Scenery Refs
-  const outerRingRef = useRef<THREE.Mesh | null>(null);
   const particlesRef = useRef<THREE.Points | null>(null);
   
   // State for loading
@@ -199,6 +198,32 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       leftHand: { x: 0, y: -Math.PI / 6, z: Math.PI / 4 },
       rightLowerArm: { x: Math.PI / 6, y: 0, z: 0 },
       leftLowerArm: { x: Math.PI / 6, y: 0, z: 0 }
+    })),
+    // Additional gestures for emotion choreography
+    defineGesture('dismissive_wave', () => ({
+      rightUpperArm: { x: 0, y: 0, z: -Math.PI / 5 },
+      rightLowerArm: { x: 0, y: Math.PI / 4, z: -Math.PI / 4 },
+      rightHand: { x: Math.sin(Date.now() * 0.004) * 0.3, y: 0, z: 0 }
+    })),
+    defineGesture('chin_rest', () => ({
+      rightUpperArm: { x: Math.PI / 6, y: 0, z: 0 },
+      rightLowerArm: { x: Math.PI / 2, y: 0, z: 0 },
+      rightHand: { x: -Math.PI / 6, y: 0, z: 0 }
+    })),
+    defineGesture('arms_crossed', () => ({
+      rightUpperArm: { x: Math.PI / 4, y: 0, z: 0 },
+      leftUpperArm: { x: Math.PI / 4, y: 0, z: 0 },
+      rightLowerArm: { x: Math.PI / 2, y: 0, z: Math.PI / 6 },
+      leftLowerArm: { x: Math.PI / 2, y: 0, z: -Math.PI / 6 }
+    })),
+    defineGesture('hand_on_hip', () => ({
+      rightUpperArm: { x: 0, y: 0, z: -Math.PI / 6 },
+      rightLowerArm: { x: Math.PI / 3, y: 0, z: 0 }
+    })),
+    defineGesture('thinking', () => ({
+      rightUpperArm: { x: Math.PI / 6, y: 0, z: 0 },
+      rightLowerArm: { x: Math.PI / 2.5, y: 0, z: 0 },
+      rightHand: { x: 0, y: Math.PI / 8, z: 0 }
     }))
   ];
 
@@ -209,7 +234,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       posture: 'defensive',
       gestures: ['dismissive_wave'],
       lookat: { x: -0.5, y: 0.1, z: 0 }, // look away
-      idle: 'frustrated_hand',
+      idle: 'head_tilt',
       mode: 'PASSIVE'
     },
     embarrassed: {
@@ -217,7 +242,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       posture: 'anxious',
       gestures: ['prayer'],
       lookat: { x: 0, y: -0.8, z: 0 }, // look down
-      idle: 'shy_hand',
+      idle: 'sway',
       mode: 'PASSIVE'
     },
     angry: {
@@ -225,13 +250,13 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       posture: 'confident',
       gestures: ['fist'],
       lookat: { x: 0, y: 0, z: 0 }, // direct stare
-      idle: 'aggressive_hand',
+      idle: 'head_tilt',
       mode: 'ACTIVE'
     },
     confused: {
       expressions: [{ name: 'a', value: 0.5 }], // open mouth confusion
       posture: 'thoughtful',
-      gestures: ['point'],
+      gestures: ['thinking'],
       lookat: { x: 0.3, y: 0.2, z: 0 }, // look uncertain
       idle: 'head_tilt',
       mode: 'PASSIVE'
@@ -241,31 +266,31 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       posture: 'joy',
       gestures: ['hands_up'],
       lookat: { x: 0, y: 0.3, z: 0 }, // look up happily
-      idle: 'happy_sway',
+      idle: 'sway',
       mode: 'ACTIVE'
     },
     contemplative: {
       expressions: [{ name: 'a', value: 0.3 }], // neutral thinking
       posture: 'thoughtful',
-      gestures: ['prayer'],
+      gestures: ['chin_rest'],
       lookat: { x: -0.2, y: -0.3, z: 0 }, // look down thoughtfully
-      idle: 'chin_rest',
+      idle: 'sway',
       mode: 'PASSIVE'
     },
     defensive: {
       expressions: [{ name: 'angry', value: 0.6 }, { name: 'sorrow', value: 0.5 }],
       posture: 'anxious',
-      gestures: ['shrug'],
+      gestures: ['arms_crossed'],
       lookat: { x: -0.3, y: 0, z: 0 }, // avoid eye contact
-      idle: 'protective_hand',
+      idle: 'head_tilt',
       mode: 'PASSIVE'
     },
     sarcastic: {
       expressions: [{ name: 'fun', value: 0.9 }, { name: 'o', value: 0.4 }], // smirk
       posture: 'confident',
-      gestures: ['peace_sign'],
+      gestures: ['hand_on_hip'],
       lookat: { x: 0.2, y: -0.2, z: 0 }, // smug glance
-      idle: 'dismissive_hand',
+      idle: 'head_tilt',
       mode: 'ACTIVE'
     },
     excited: {
@@ -273,7 +298,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       posture: 'engaged',
       gestures: ['applause'],
       lookat: { x: 0, y: 0.4, z: 0 }, // look up excitedly
-      idle: 'energetic_sway',
+      idle: 'sway',
       mode: 'ACTIVE'
     }
   };
@@ -774,18 +799,18 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
             const sVol = smoothedVolume.current;
             
             // 1. Enhanced Audio-Driven Lip Sync + Phonemes
+            // Use standard VRM preset names: a, i, u, e, o (not aa, ih)
             const mouthOpen = Math.min(1.0, sVol * 3.0);
-            addExpressionTarget('aa', mouthOpen * 0.7);
-            addExpressionTarget('ih', mouthOpen * 0.4);
+            addExpressionTarget('a', mouthOpen * 0.7);
+            addExpressionTarget('i', mouthOpen * 0.4);
             addExpressionTarget('u', mouthOpen * 0.3);
             addExpressionTarget('e', mouthOpen * 0.35);
             addExpressionTarget('o', mouthOpen * 0.5);
 
-            // 2. Breathing Animation (subtle chest/spine expansion)
+            // 2. Breathing Animation (subtle chest movement via spine bones, not expressions)
             breathingTime.current += delta;
             breathingPhase.current = Math.sin(breathingTime.current * 0.8) * 0.5 + 0.5; // 0 to 1
-            const breathAmount = breathingPhase.current * 0.05; // 5% expansion
-            addExpressionTarget('chest_expand', breathAmount * 0.3); // If available
+            // Breathing is handled via spine bone rotation in the bone update section below
 
             // 3. Blinking (with interruption support)
             if (blinkAllowedRef.current) {

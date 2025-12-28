@@ -10,25 +10,24 @@
 - [ ] Smooth camera transitions when switching models
 
 ### Expression System Fixes
-- [ ] Lip sync uses `aa`, `ih`, `u`, `e`, `o` but sidecars use `a`, `i`, `u`, `e`, `o` - normalize naming
-- [ ] Some emotions reference gestures that don't exist (`dismissive_wave`, `frustrated_hand`, etc.)
-- [ ] `chest_expand` expression doesn't exist on most models - remove or make conditional
+- [x] Lip sync uses `aa`, `ih`, `u`, `e`, `o` but sidecars use `a`, `i`, `u`, `e`, `o` - normalize naming
+- [x] Some emotions reference gestures that don't exist (`dismissive_wave`, `frustrated_hand`, etc.) - added missing gestures
+- [x] `chest_expand` expression doesn't exist on most models - removed, breathing handled via spine bones
 
 ## 🟡 Medium Priority
 
 ### Code Quality / Deprecations
 - [ ] Replace deprecated `ScriptProcessorNode` with `AudioWorkletNode` in liveManager.ts
-- [ ] Remove unused `currentMicVolume` variable in liveManager.ts
-- [ ] Remove unused `initialKeyIndex` variable in liveManager.ts
-- [ ] Add proper TypeScript types for regex match variable `m`
-- [ ] `outerRingRef` is declared but never used in NeuralCore.tsx
-- [ ] `videoRef` and `mediaStreamRef` are set up but camera feed isn't displayed anywhere
+- [x] Remove unused `currentMicVolume` variable - NOW USED for mic level indicator in UI
+- [x] Remove unused `initialKeyIndex` variable in liveManager.ts - removed (was debug only)
+- [x] `outerRingRef` is declared but never used in NeuralCore.tsx - removed
+- [x] `videoRef` and `mediaStreamRef` removed - camera feed wasn't being used
 - [ ] Add `type="button"` to all buttons in App.tsx for accessibility
 
 ### Audio System
 - [ ] `decodeAudioData` creates a new AudioContext every call - should reuse existing context
 - [ ] Consider implementing proper phoneme detection instead of volume-based lip sync
-- [ ] Add mic volume indicator (currently tracked but not displayed)
+- [x] Add mic volume indicator - now shows both mic input and AI output levels
 
 ### VRM Loading
 - [ ] Handle VRM load errors gracefully with user feedback

@@ -7,6 +7,7 @@ const App: React.FC = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
   const [statusText, setStatusText] = useState("STANDBY");
   const [volume, setVolume] = useState(0);
+  const [micVolume, setMicVolume] = useState(0);
   const [vrmCommand, setVrmCommand] = useState<VrmCommand | null>(null);
   const [vrmExpressions, setVrmExpressions] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -30,6 +31,7 @@ const App: React.FC = () => {
   const [selectedMode, setSelectedMode] = useState<'ACTIVE' | 'PASSIVE'>('ACTIVE');
 
   const liveVolumeRef = useRef<number>(0);
+  const liveMicVolumeRef = useRef<number>(0);
 
   // Load available VRM models on mount
   useEffect(() => {
@@ -58,6 +60,7 @@ const App: React.FC = () => {
     
     mgr.onStatusChange = (text) => setStatusText(text.toUpperCase());
     mgr.onVolumeChange = (vol) => { liveVolumeRef.current = vol; };
+    mgr.onMicVolumeChange = (vol) => { liveMicVolumeRef.current = vol; };
     mgr.onVrmCommand = (command) => setVrmCommand(command);
     mgr.onClose = () => setConnectionState(ConnectionState.DISCONNECTED);
 
@@ -78,6 +81,8 @@ const App: React.FC = () => {
       last = t;
       const v = liveVolumeRef.current;
       setVolume(prev => Math.abs(prev - v) < 0.0001 ? prev : v);
+      const mv = liveMicVolumeRef.current;
+      setMicVolume(prev => Math.abs(prev - mv) < 0.0001 ? prev : mv);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
@@ -273,24 +278,50 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Bottom-right: Audio level indicator (only when connected) */}
+        {/* Bottom-right: Audio level indicators (only when connected) */}
         {isConnected && (
-          <div className="absolute bottom-4 right-4 flex items-center gap-1.5">
-            <div className="flex gap-0.5 items-end h-4">
-              {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, i) => (
-                <div 
-                  key={i}
-                  className={`w-1 rounded-sm transition-all duration-75 ${
-                    volume >= threshold 
-                      ? 'bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.6)]' 
-                      : 'bg-cyan-900/40'
-                  }`}
-                  style={{ height: `${(i + 1) * 3 + 4}px` }}
-                  aria-hidden="true"
-                />
-              ))}
+          <div className="absolute bottom-4 right-4 flex items-center gap-4">
+            {/* Mic input level */}
+            <div className="flex items-center gap-1.5">
+              <svg className="w-3 h-3 text-green-500/60" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1 1.93c-3.94-.49-7-3.85-7-7.93h2c0 3.31 2.69 6 6 6s6-2.69 6-6h2c0 4.08-3.06 7.44-7 7.93V20h4v2H8v-2h4v-4.07z"/>
+              </svg>
+              <div className="flex gap-0.5 items-end h-4">
+                {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, i) => (
+                  <div 
+                    key={i}
+                    className={`w-1 rounded-sm transition-all duration-75 ${
+                      micVolume >= threshold 
+                        ? 'bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.6)]' 
+                        : 'bg-green-900/40'
+                    }`}
+                    style={{ height: `${(i + 1) * 3 + 4}px` }}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
             </div>
-            <span className="font-mono text-[9px] text-cyan-500/40 tracking-wider">VOL</span>
+            
+            {/* AI output level */}
+            <div className="flex items-center gap-1.5">
+              <div className="flex gap-0.5 items-end h-4">
+                {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, i) => (
+                  <div 
+                    key={i}
+                    className={`w-1 rounded-sm transition-all duration-75 ${
+                      volume >= threshold 
+                        ? 'bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.6)]' 
+                        : 'bg-cyan-900/40'
+                    }`}
+                    style={{ height: `${(i + 1) * 3 + 4}px` }}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+              <svg className="w-3 h-3 text-cyan-500/60" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              </svg>
+            </div>
           </div>
         )}
 

@@ -46,6 +46,7 @@ export class LiveManager {
     // VrmCommand types emitted to the app
     public onVrmCommand: (command: VrmCommand) => void = () => {};
     public onVolumeChange: (vol: number) => void = () => {};
+    public onMicVolumeChange: (vol: number) => void = () => {}; // User's mic level
     public onStatusChange: (status: string) => void = () => {};
     public onClose: () => void = () => {};
 
@@ -140,7 +141,6 @@ export class LiveManager {
         this.onStatusChange("Connecting to Neural Core...");
 
         // 4. Connect to Live API with key rotation
-        const initialKeyIndex = this.currentApiKeyIndex;
         let connectionError: any = null;
 
         for (let i = 0; i < this.apiKeys.length; i++) {
@@ -363,6 +363,7 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
             const rms = Math.sqrt(sum / inputData.length);
             
             this.currentMicVolume = rms;
+            this.onMicVolumeChange(Math.min(1, rms * 3)); // Normalize and emit mic volume
 
             const currentSampleRate = this.inputAudioContext.sampleRate;
             const downsampledData = downsampleBuffer(inputData, currentSampleRate, 16000);
