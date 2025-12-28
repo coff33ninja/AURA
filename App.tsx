@@ -3,6 +3,7 @@ import { ConnectionState } from "./types";
 import { LiveManager, VrmCommand } from "./services/liveManager";
 import { NeuralCore, PoseSettings, NeuralCoreHandle } from "./components/NeuralCore";
 import { BehaviorEditor } from "./components/BehaviorEditor";
+import { FpsCounter } from "./components/FpsCounter";
 import { conversationStore } from "./services/conversationStore";
 import { VrmConfig } from "./types/vrmConfig";
 import { 
@@ -25,6 +26,7 @@ import {
   validateVrmFile,
   createVrmObjectUrl,
 } from "./utils/vrmValidator";
+import { createFpsCounter, type FpsState } from "./utils/fpsCounter";
 import type { CustomVrmEntry } from "./types/enhancementTypes";
 
 // localStorage keys for user preferences
@@ -148,6 +150,11 @@ const App: React.FC = () => {
   const [customVrms, setCustomVrms] = useState<CustomVrmEntry[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // FPS counter state (debug mode)
+  const [showFpsCounter, setShowFpsCounter] = useState(false);
+  const [fpsState, setFpsState] = useState<FpsState>({ fps: 60, frameTime: 16.67, color: 'green' });
+  const fpsCounterRef = useRef(createFpsCounter());
   
   // Per-model pose settings stored as { modelName: PoseSettings }
   const [allPoseSettings, setAllPoseSettings] = useState<Record<string, PoseSettings>>(() => {
@@ -305,16 +312,23 @@ const App: React.FC = () => {
     let last = 0;
     const tick = (t: number) => {
       raf = requestAnimationFrame(tick);
-      if (t - last < 33) return;
+      const delta = t - last;
+      if (delta < 33) return;
       last = t;
       const v = liveVolumeRef.current;
       setVolume((prev) => (Math.abs(prev - v) < 0.0001 ? prev : v));
       const mv = liveMicVolumeRef.current;
       setMicVolume((prev) => (Math.abs(prev - mv) < 0.0001 ? prev : mv));
+      
+      // Update FPS counter
+      if (showFpsCounter) {
+        fpsCounterRef.current.update(delta / 1000);
+        setFpsState(fpsCounterRef.current.getState());
+      }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [showFpsCounter]);
 
   useEffect(() => {
     if (liveManagerRef.current) {
@@ -394,6 +408,12 @@ const App: React.FC = () => {
       if (e.code === "KeyF" && !e.repeat) {
         e.preventDefault();
         toggleFullscreen();
+      }
+      
+      // D key for debug mode (FPS counter)
+      if (e.code === "KeyD" && !e.repeat) {
+        e.preventDefault();
+        setShowFpsCounter(prev => !prev);
       }
     };
 
@@ -591,6 +611,14 @@ const App: React.FC = () => {
           />
         )}
       </div>
+
+      {/* FPS Counter (debug mode) */}
+      <FpsCounter
+        visible={showFpsCounter}
+        fps={fpsState.fps}
+        frameTime={fpsState.frameTime}
+        color={fpsState.color}
+      />
 
       {/* HUD Overlay Layer */}
       <div className="absolute inset-0 z-10 pointer-events-none">
