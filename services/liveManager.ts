@@ -297,8 +297,13 @@ export class LiveManager {
                                 this.scheduleAudio(audioBuffer);
                             }
                         },
-                        onclose: () => {
-                            console.log('[LiveManager] Connection closed');
+                        onclose: (event: any) => {
+                            console.log('[LiveManager] Connection closed', {
+                                code: event?.code,
+                                reason: event?.reason,
+                                wasClean: event?.wasClean,
+                                event
+                            });
                             this.onStatusChange("Disconnected");
                             this.disconnect();
                         },
@@ -373,12 +378,14 @@ export class LiveManager {
                 this.workletNode = new AudioWorkletNode(this.inputAudioContext, 'mic-processor');
                 
                 this.workletNode.port.onmessage = (event) => {
-                    if (!this.inputAudioContext || !this.sessionPromise) return;
-                    
                     const { buffer, rms } = event.data;
                     
+                    // Always update mic volume for UI feedback, even if not connected
                     this.currentMicVolume = rms;
                     this.onMicVolumeChange(Math.min(1, rms * 3));
+                    
+                    // Only send audio if we have a valid session
+                    if (!this.inputAudioContext || !this.sessionPromise) return;
                     
                     const currentSampleRate = this.inputAudioContext.sampleRate;
                     const downsampledData = downsampleBuffer(new Float32Array(buffer), currentSampleRate, 16000);
@@ -409,16 +416,18 @@ export class LiveManager {
         this.processor = this.inputAudioContext.createScriptProcessor(4096, 1, 1);
 
         this.processor.onaudioprocess = (e) => {
-            if (!this.inputAudioContext || !this.sessionPromise) return;
-            
             const inputData = e.inputBuffer.getChannelData(0);
             
             let sum = 0;
             for(let i=0; i<inputData.length; i++) sum += inputData[i] * inputData[i];
             const rms = Math.sqrt(sum / inputData.length);
             
+            // Always update mic volume for UI feedback
             this.currentMicVolume = rms;
-            this.onMicVolumeChange(Math.min(1, rms * 3)); // Normalize and emit mic volume
+            this.onMicVolumeChange(Math.min(1, rms * 3));
+
+            // Only send audio if we have a valid session
+            if (!this.inputAudioContext || !this.sessionPromise) return;
 
             const currentSampleRate = this.inputAudioContext.sampleRate;
             const downsampledData = downsampleBuffer(inputData, currentSampleRate, 16000);
@@ -447,8 +456,9 @@ export class LiveManager {
         let startAt = this.nextStartTime;
         const now = this.outputAudioContext.currentTime;
         
+        // If we've fallen behind, catch up with minimal gap to avoid stuttering
         if (startAt < now) {
-            startAt = now + 0.05;
+            startAt = now + 0.01; // Reduced from 0.05 to minimize gaps
         }
         
         const source = this.outputAudioContext.createBufferSource();
@@ -461,29 +471,34 @@ export class LiveManager {
 
     private startVisualizerLoop() {
         const dataArray = new Uint8Array(this.analyser ? this.analyser.frequencyBinCount : 0);
+        let smoothedVol = 0; // Local smoothing for lip sync
 
         const update = () => {
             if (!this.visualizerActive) return;
 
-            let displayVol = 0;
-            const now = this.outputAudioContext?.currentTime || 0;
-            const isAiSpeaking = this.nextStartTime > now;
-
-            if (isAiSpeaking && this.analyser && dataArray.length > 0) {
+            let rawVol = 0;
+            
+            // Always read from analyser if it exists - it will show actual audio output
+            if (this.analyser && dataArray.length > 0) {
                 this.analyser.getByteFrequencyData(dataArray);
                 let sum = 0;
                 for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
                 const avg = sum / dataArray.length;
-                displayVol = avg / 128.0;
-            } else {
-                displayVol = 0;
+                rawVol = avg / 128.0;
             }
 
             // Defensive: ensure we only emit finite, clamped values
-            if (!Number.isFinite(displayVol) || isNaN(displayVol)) displayVol = 0;
-            displayVol = Math.max(0, Math.min(1, displayVol));
+            if (!Number.isFinite(rawVol) || isNaN(rawVol)) rawVol = 0;
+            rawVol = Math.max(0, Math.min(1, rawVol));
 
-            this.onVolumeChange(displayVol);
+            // Smooth the volume for better lip sync (fast attack, slower decay)
+            if (rawVol > smoothedVol) {
+                smoothedVol = smoothedVol + (rawVol - smoothedVol) * 0.5; // Fast attack
+            } else {
+                smoothedVol = smoothedVol + (rawVol - smoothedVol) * 0.15; // Slower decay
+            }
+
+            this.onVolumeChange(smoothedVol);
             requestAnimationFrame(update);
         };
         update();

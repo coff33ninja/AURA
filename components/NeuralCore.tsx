@@ -811,12 +811,13 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
             
             // 1. Enhanced Audio-Driven Lip Sync + Phonemes
             // Use standard VRM preset names: a, i, u, e, o (not aa, ih)
-            const mouthOpen = Math.min(1.0, sVol * 3.0);
-            addExpressionTarget('a', mouthOpen * 0.7);
-            addExpressionTarget('i', mouthOpen * 0.4);
-            addExpressionTarget('u', mouthOpen * 0.3);
-            addExpressionTarget('e', mouthOpen * 0.35);
-            addExpressionTarget('o', mouthOpen * 0.5);
+            // Boost sensitivity for better visibility
+            const mouthOpen = Math.min(1.0, sVol * 4.0); // Increased multiplier from 3.0 to 4.0
+            addExpressionTarget('a', mouthOpen * 0.8);   // Primary mouth open
+            addExpressionTarget('i', mouthOpen * 0.3);   // Reduced for variety
+            addExpressionTarget('u', mouthOpen * 0.25);
+            addExpressionTarget('e', mouthOpen * 0.3);
+            addExpressionTarget('o', mouthOpen * 0.6);   // Secondary mouth shape
 
             // 2. Breathing Animation (subtle chest movement via spine bones, not expressions)
             breathingTime.current += delta;
@@ -1109,19 +1110,18 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
     }
   }, [vrmCommand]);
 
-  // Sync prop 'volume' to ref for the animation loop
+  // Sync prop 'volume' to ref for the animation loop with smoothing
   useEffect(() => {
-     // Linear interpolation for smoothing
+     // The volume already has smoothing from liveManager, but we add a bit more
+     // for even smoother mouth movements
      const target = volume;
-     // Simple lerp: current = current + (target - current) * 0.1
-     // Note: This effect runs only when volume changes (React update). 
-     // The animation loop reads 'smoothedVolume.current'.
-     // To make it smooth, we just update the 'target' here? 
-     // No, we update the ref immediately or let the loop lerp.
-     // Let's just set the target here and let the loop handle smooth damping? 
-     // Actually, simpler: just update the ref here directly, but to "smooth" it, we might want an intermediate target ref.
-     // For simplicity in this code block:
-     smoothedVolume.current = volume; 
+     const current = smoothedVolume.current;
+     // Lerp toward target - fast attack, medium decay
+     if (target > current) {
+       smoothedVolume.current = current + (target - current) * 0.6; // Fast attack for responsiveness
+     } else {
+       smoothedVolume.current = current + (target - current) * 0.3; // Medium decay for smoothness
+     }
   }, [volume]);
 
   // NOTE: Camera feed code removed - was unused and causing errors
