@@ -19,8 +19,6 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const vrmRef = useRef<VRM | null>(null);
   const clockRef = useRef<THREE.Clock>(new THREE.Clock());
-  const videoRef = useRef<HTMLVideoElement>(null); // Ref for the video element
-  const mediaStreamRef = useRef<MediaStream | null>(null); // Ref to hold the MediaStream
 
   // Scenery Refs
   const outerRingRef = useRef<THREE.Mesh | null>(null);
@@ -704,7 +702,12 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         setIsLoading(false);
       },
       (progress) => console.log('Loading VRM...', 100.0 * (progress.loaded / progress.total), '%'),
-      (error) => console.error('VRM Load Error:', error)
+      (error) => {
+        console.error('VRM Load Error:', error);
+        setIsLoading(false);
+        // Notify parent that this model has no valid expressions
+        onVrmExpressionsLoaded(['joy', 'angry', 'sorrow', 'fun', 'blink', 'a', 'i', 'u', 'e', 'o']);
+      }
     );
 
     // 5. Animation Loop
@@ -1066,37 +1069,16 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
      smoothedVolume.current = volume; 
   }, [volume]);
 
-  useEffect(() => {
-    const enableCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        mediaStreamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-      } catch (err) {
-        console.error('Error accessing camera:', err);
-      }
-    };
-
-    enableCamera();
-
-    return () => {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []); // Run only once on mount
+  // NOTE: Camera feed code removed - was unused and causing errors
+  // Can be re-enabled later for face tracking features
 
   return (
     <div className="relative w-full h-full">
-        <video ref={videoRef} className="absolute w-0 h-0 invisible" playsInline muted />
         <div ref={mountRef} className="w-full h-full" />
         {isLoading && (
             <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center pointer-events-none">
                 <div className="text-cyan-400 font-mono animate-pulse">
-                    LOADING BIOMETRIC AVATAR...
+                    LOADING AVATAR...
                 </div>
             </div>
         )}
