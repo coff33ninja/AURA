@@ -241,3 +241,9 @@ body {
     font-size: 9px;
   }
 }
+
+/* Background preset button with color indicator */
+.bg-preset-btn {
+  border-left-width: 3px;
+  border-left-style: solid;
+}

@@ -172,6 +172,12 @@ export interface IdleConfig {
     enabled: boolean;
     amount: number;
   };
+  saccade?: {
+    enabled: boolean;
+    amplitude?: number; // degrees
+    minInterval?: number; // seconds
+    maxInterval?: number; // seconds
+  };
   preset: 'calm' | 'energetic' | 'sleepy' | 'alert' | 'custom';
   stateOverrides?: {
     listening?: Partial<Omit<IdleConfig, 'stateOverrides' | 'preset'>>;

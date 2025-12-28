@@ -51,7 +51,7 @@
 - [ ] Add screenshot/recording functionality
 - [ ] Support custom VRM upload
 - [ ] Add background scene options (solid color, gradient, environment maps)
-- [ ] Implement actual finger bone control for gestures (currently arm-only)
+- [x] Implement actual finger bone control for gestures - BehaviorEditor Hands tab with 28 finger bones
 
 ### Animation System
 - [ ] Add more idle animations variety
@@ -84,7 +84,7 @@
 ## 📝 Documentation
 
 - [ ] Add JSDoc comments to exported functions
-- [ ] Document VRM sidecar format
+- [x] Document VRM sidecar format - README updated with Modular Behavior System docs
 - [ ] Create contribution guidelines
 - [ ] Add architecture diagram
 - [ ] Document command format for custom integrations
@@ -96,6 +96,6 @@
   - `useAnimationLoop.ts` - Animation frame handling
   - `useGestures.ts` - Gesture definitions and playback
   - `useExpressions.ts` - Expression management
-- [ ] Move emotion choreography to separate config file
-- [ ] Create proper TypeScript interfaces for sidecar JSON structure
+- [x] Move emotion choreography to separate config file - BehaviorManager + JSON configs
+- [x] Create proper TypeScript interfaces for sidecar JSON structure - types/behaviorTypes.ts
 - [ ] Centralize magic numbers (camera positions, animation speeds, etc.)

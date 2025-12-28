@@ -18,6 +18,11 @@ import type {
   LipSyncConfig,
   TransformConfig 
 } from '../types/behaviorTypes';
+import { getEasingFunction, type EasingType } from '../utils/animationBlender';
+import { updateSaccadeState, DEFAULT_SACCADE_CONFIG } from '../utils/saccadeGenerator';
+import { calculateBreathingState, getStateMultiplier } from '../utils/breathingAnimator';
+import { calculateWalkingBob, smoothTransitionBob, DEFAULT_WALKING_CONFIG } from '../utils/walkingAnimator';
+import type { BreathingConfig } from '../types/enhancementTypes';
 
 export interface PoseSettings {
   rotation: number; // Y rotation in degrees (0-360)
@@ -80,9 +85,27 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
   const actionRef = useRef<THREE.AnimationAction | null>(null);
   const availableAnimations = useRef<Map<string, THREE.AnimationClip>>(new Map());
   
-  // Gesture support with queueing
+  // Gesture support with queueing and smooth blending
   const gestureQueue = useRef<Array<{ name: string; duration: number }>>([]);
-  const gestureStateRef = useRef<{ active: boolean; elapsed: number; duration: number; currentGesture: string | null }>({ active: false, elapsed: 0, duration: 0, currentGesture: null });
+  const gestureStateRef = useRef<{ 
+    active: boolean; 
+    elapsed: number; 
+    duration: number; 
+    currentGesture: string | null;
+    transitionSpeed: number;
+    easing: EasingType;
+    fromPose: Record<string, { x: number; y: number; z: number }>;
+    toPose: Record<string, { x: number; y: number; z: number }>;
+  }>({ 
+    active: false, 
+    elapsed: 0, 
+    duration: 0, 
+    currentGesture: null,
+    transitionSpeed: 0.3,
+    easing: 'easeInOut',
+    fromPose: {},
+    toPose: {},
+  });
   const idleStateRef = useRef<'idle' | 'talking' | 'listening' | 'thinking'>('idle');
   const idleGesturesRef = useRef<string[]>([]);
   
@@ -92,6 +115,13 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
   // Breathing animation
   const breathingTime = useRef(0);
   const breathingPhase = useRef(0);
+  
+  // Saccade (eye micro-movement) state
+  const saccadeState = useRef<{ offsetX: number; offsetY: number; nextSaccadeTime: number }>({
+    offsetX: 0,
+    offsetY: 0,
+    nextSaccadeTime: Math.random() * 1.0 + 0.5,
+  });
   
   // Blink state with interruption control
   const blinkTimer = useRef(0);
@@ -114,6 +144,7 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
   // Walk/movement state
   const walkStateRef = useRef({ speed: 0, direction: 0, isWalking: false, position: { x: 0, y: 0, z: 0 } });
   const legAngleRef = useRef(0); // For procedural leg animation
+  const walkBobOffsetRef = useRef(0); // Current vertical bob offset for smooth transitions
 
   // Camera smooth transition targets
   const cameraTargetPosition = useRef({ x: 0, y: 1.4, z: 1.5 });
@@ -290,11 +321,41 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
       // Trigger next gesture processing
       const { name, duration: dur } = gestureQueue.current.shift()!;
       const rots = getGestureRotations(name);
+      const gestureConfig = gesturesMapRef.current.get(name);
       if (rots) {
+        // Capture current bone positions as starting pose
+        const fromPose: Record<string, { x: number; y: number; z: number }> = {};
+        const vrm = vrmRef.current;
+        if (vrm) {
+          for (const boneName of Object.keys(rots)) {
+            const bone = vrm.humanoid.getNormalizedBoneNode(boneName as VRMHumanBoneName);
+            if (bone) {
+              fromPose[boneName] = { 
+                x: bone.rotation.x, 
+                y: bone.rotation.y, 
+                z: bone.rotation.z 
+              };
+            } else {
+              fromPose[boneName] = { x: 0, y: 0, z: 0 };
+            }
+          }
+        }
+        
+        // Set bone targets for the gesture
         for (const [boneName, rot] of Object.entries(rots)) {
           boneTargets.current[boneName] = rot;
         }
-        gestureStateRef.current = { active: true, elapsed: 0, duration: dur, currentGesture: name };
+        
+        gestureStateRef.current = { 
+          active: true, 
+          elapsed: 0, 
+          duration: dur, 
+          currentGesture: name,
+          transitionSpeed: gestureConfig?.transitionSpeed ?? 0.3,
+          easing: 'easeInOut',
+          fromPose,
+          toPose: rots,
+        };
       }
     }
   };
@@ -439,7 +500,16 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
 
   const playNextGesture = useCallback(() => {
     if (gestureQueue.current.length === 0) {
-      gestureStateRef.current = { active: false, elapsed: 0, duration: 0, currentGesture: null };
+      gestureStateRef.current = { 
+        active: false, 
+        elapsed: 0, 
+        duration: 0, 
+        currentGesture: null,
+        transitionSpeed: 0.3,
+        easing: 'easeInOut',
+        fromPose: {},
+        toPose: {},
+      };
       return;
     }
     
@@ -447,11 +517,40 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     const rotations = getGestureRotations(name);
     if (!rotations) return;
     
+    const gestureConfig = gesturesMapRef.current.get(name);
+    
+    // Capture current bone positions as starting pose
+    const fromPose: Record<string, { x: number; y: number; z: number }> = {};
+    const vrm = vrmRef.current;
+    if (vrm) {
+      for (const boneName of Object.keys(rotations)) {
+        const bone = vrm.humanoid.getNormalizedBoneNode(boneName as VRMHumanBoneName);
+        if (bone) {
+          fromPose[boneName] = { 
+            x: bone.rotation.x, 
+            y: bone.rotation.y, 
+            z: bone.rotation.z 
+          };
+        } else {
+          fromPose[boneName] = { x: 0, y: 0, z: 0 };
+        }
+      }
+    }
+    
     for (const [boneName, rot] of Object.entries(rotations)) {
       boneTargets.current[boneName] = rot;
     }
     
-    gestureStateRef.current = { active: true, elapsed: 0, duration, currentGesture: name };
+    gestureStateRef.current = { 
+      active: true, 
+      elapsed: 0, 
+      duration, 
+      currentGesture: name,
+      transitionSpeed: gestureConfig?.transitionSpeed ?? 0.3,
+      easing: 'easeInOut',
+      fromPose,
+      toPose: rotations,
+    };
   }, [getGestureRotations]);
 
   // Idle gesture support with state management
@@ -721,7 +820,27 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
       return new VRMLoaderPlugin(parser);
     });
 
-    const vrmUrl = `/VRM-Models/${vrmModel || 'Arlecchino-Normal_look.vrm'}`;
+    // Handle custom VRM URLs (object URLs) vs built-in models
+    let vrmUrl: string;
+    let modelBaseName: string;
+    
+    if (vrmModel?.startsWith('custom:')) {
+      // Custom VRM - the URL is stored in sessionStorage or passed via a global
+      const customName = vrmModel.replace('custom:', '');
+      // Look for the object URL in window (set by App.tsx when uploading)
+      const customVrmUrl = (window as any).__customVrmUrls?.[customName];
+      if (customVrmUrl) {
+        vrmUrl = customVrmUrl;
+      } else {
+        console.error('Custom VRM URL not found for:', customName);
+        setLoadError(`Custom VRM not found: ${customName}`);
+        return;
+      }
+      modelBaseName = customName;
+    } else {
+      vrmUrl = `/VRM-Models/${vrmModel || 'Arlecchino-Normal_look.vrm'}`;
+      modelBaseName = vrmModel?.replace('.vrm', '') || 'AvatarSample_D';
+    }
 
     // If there is already a VRM loaded from a previous mount, remove it before loading new one
     if (vrmRef.current && sceneRef.current) {
@@ -737,9 +856,7 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
       setLoadProgress(0);
       setLoadError(null);
     }
-    
-    // Load VRM config before loading the model
-    const modelBaseName = vrmModel?.replace('.vrm', '') || 'AvatarSample_D';
+
     getVrmConfig(modelBaseName).then(config => {
       vrmConfigRef.current = config;
       console.log('[NeuralCore] Loaded config for', modelBaseName, config);
@@ -904,7 +1021,16 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         
         // Clear state from previous model
         gestureQueue.current = [];
-        gestureStateRef.current = { active: false, elapsed: 0, duration: 0, currentGesture: null };
+        gestureStateRef.current = { 
+          active: false, 
+          elapsed: 0, 
+          duration: 0, 
+          currentGesture: null,
+          transitionSpeed: 0.3,
+          easing: 'easeInOut',
+          fromPose: {},
+          toPose: {},
+        };
         expressionPersist.current = {};
         expressionTargets.current = {};
         expressionTargetsActual.current = {};
@@ -1085,9 +1211,13 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
               walkStateRef.current.position.x = Math.max(-2, Math.min(2, walkStateRef.current.position.x));
               walkStateRef.current.position.z = Math.max(-1.5, Math.min(1.5, walkStateRef.current.position.z));
               
-              // Apply to VRM scene (preserve base Y offset from height adjustment)
+              // Calculate walking bob (vertical bounce synced with leg movement)
+              const walkBobState = calculateWalkingBob(walkStateRef.current.speed, elapsedTime, DEFAULT_WALKING_CONFIG);
+              walkBobOffsetRef.current = smoothTransitionBob(walkBobOffsetRef.current, walkBobState.verticalOffset, delta, 8.0);
+              
+              // Apply to VRM scene (preserve base Y offset from height adjustment + add bob)
               vrm.scene.position.x = walkStateRef.current.position.x;
-              vrm.scene.position.y = walkStateRef.current.position.y;
+              vrm.scene.position.y = walkStateRef.current.position.y + walkBobOffsetRef.current;
               vrm.scene.position.z = walkStateRef.current.position.z;
               
               // Animate legs procedurally
@@ -1096,6 +1226,12 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
               const rightLeg = vrm.humanoid.getNormalizedBoneNode('rightLowerLeg');
               if (leftLeg) leftLeg.rotation.x = Math.sin(legAngleRef.current) * 0.6;
               if (rightLeg) rightLeg.rotation.x = Math.sin(legAngleRef.current + Math.PI) * 0.6;
+            } else {
+              // Smoothly return bob to zero when not walking
+              walkBobOffsetRef.current = smoothTransitionBob(walkBobOffsetRef.current, 0, delta, 5.0);
+              if (Math.abs(walkBobOffsetRef.current) > 0.0001) {
+                vrm.scene.position.y = walkStateRef.current.position.y + walkBobOffsetRef.current;
+              }
             }
             
             // 0.75. Apply postural shifts (body position/rotation)
@@ -1125,16 +1261,39 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
             addExpressionTarget('e', mouthOpen * visemeWeights.e);
             addExpressionTarget('o', mouthOpen * visemeWeights.o);
 
-            // 2. Breathing Animation (subtle chest movement via spine bones, not expressions)
-            // Use behavior idle config
+            // 2. Breathing Animation (subtle chest movement via spine bones)
+            // Use behavior idle config for breathing parameters
             const idleConfig = behaviors?.idle;
-            const breathingSpeed = idleConfig?.breathing?.enabled !== false ? (idleConfig?.breathing?.speed ?? 0.8) : 0;
-            const breathingIntensity = idleConfig?.breathing?.intensity ?? 0.02;
-            breathingTime.current += delta;
-            breathingPhase.current = Math.sin(breathingTime.current * breathingSpeed) * 0.5 + 0.5; // 0 to 1
-            // Breathing is handled via spine bone rotation in the bone update section below
+            const breathingEnabled = idleConfig?.breathing?.enabled !== false;
+            if (breathingEnabled) {
+              const breathingConfig: BreathingConfig = {
+                enabled: true,
+                speed: idleConfig?.breathing?.speed ?? 0.8,
+                intensity: idleConfig?.breathing?.intensity ?? 0.02,
+                spineWeight: 0.6,
+                chestWeight: 1.0,
+              };
+              
+              // Determine state multiplier based on current activity
+              // Reduce breathing during talking (when volume is high)
+              const avatarState = sVol > 0.3 ? 'talking' : (isActive ? 'listening' : 'idle');
+              const stateMultiplier = getStateMultiplier(avatarState as 'idle' | 'talking' | 'listening' | 'thinking');
+              
+              breathingTime.current += delta;
+              const breathingState = calculateBreathingState(breathingTime.current, breathingConfig, stateMultiplier);
+              breathingPhase.current = breathingState.phase;
+              
+              // Apply breathing rotations directly to spine and chest bone targets
+              // Only set if not already set by gestures (gestures take priority)
+              if (!boneTargets.current['spine']) {
+                boneTargets.current['spine'] = breathingState.spineRotation;
+              }
+              if (!boneTargets.current['chest']) {
+                boneTargets.current['chest'] = breathingState.chestRotation;
+              }
+            }
 
-            // 3. Blinking (with interruption support)
+            // 3. Blinking (with interruption support and timing variation)
             const blinkEnabled = idleConfig?.blinking?.enabled !== false;
             const blinkInterval = idleConfig?.blinking?.interval ?? 4.0;
             const blinkDuration = idleConfig?.blinking?.duration ?? 0.15;
@@ -1142,7 +1301,9 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
               blinkTimer.current += delta;
               if (blinkTimer.current >= nextBlinkTime.current) {
                 blinkTimer.current = 0;
-                nextBlinkTime.current = Math.random() * blinkInterval + 2;
+                // Add 20% timing variation around base interval for natural feel
+                const variation = blinkInterval * 0.2;
+                nextBlinkTime.current = blinkInterval + (Math.random() - 0.5) * 2 * variation;
               }
               const blinkPhase = blinkTimer.current;
               let blinkValue = 0;
@@ -1150,6 +1311,32 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
               if (blinkPhase < blinkDur) blinkValue = blinkPhase / blinkDur;
               else if (blinkPhase < blinkDur * 2) blinkValue = 1 - (blinkPhase - blinkDur) / blinkDur;
               addExpressionTarget('blink', Math.max(0, blinkValue));
+            }
+
+            // 3.5. Saccade (eye micro-movements) for natural eye behavior
+            // Update saccade state and apply subtle eye movement via expressions
+            const saccadeEnabled = idleConfig?.saccade?.enabled !== false;
+            if (saccadeEnabled) {
+              const newSaccadeState = updateSaccadeState(
+                saccadeState.current,
+                DEFAULT_SACCADE_CONFIG,
+                delta
+              );
+              saccadeState.current = newSaccadeState;
+              
+              // Apply saccade as subtle look expressions (convert degrees to 0-1 range)
+              // Typical saccade amplitude is 2-5 degrees, map to ~0.1-0.3 expression value
+              const saccadeIntensity = 0.05; // Scale factor for expression values
+              if (newSaccadeState.offsetX > 0.5) {
+                addExpressionTarget('lookRight', Math.min(0.3, newSaccadeState.offsetX * saccadeIntensity));
+              } else if (newSaccadeState.offsetX < -0.5) {
+                addExpressionTarget('lookLeft', Math.min(0.3, Math.abs(newSaccadeState.offsetX) * saccadeIntensity));
+              }
+              if (newSaccadeState.offsetY > 0.5) {
+                addExpressionTarget('lookUp', Math.min(0.2, newSaccadeState.offsetY * saccadeIntensity));
+              } else if (newSaccadeState.offsetY < -0.5) {
+                addExpressionTarget('lookDown', Math.min(0.2, Math.abs(newSaccadeState.offsetY) * saccadeIntensity));
+              }
             }
 
             // 4. Update Animation Mixer (for full body animations)
@@ -1245,10 +1432,27 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
               const bone = vrm.humanoid.getNormalizedBoneNode(boneName);
               const btarget = boneTargets.current[boneName];
               if (bone && btarget) {
-                // Smoothly lerp toward target rotations
-                bone.rotation.x += (btarget.x - bone.rotation.x) * Math.min(1, boneSmoothingSpeed * delta);
-                bone.rotation.y += (btarget.y - bone.rotation.y) * Math.min(1, boneSmoothingSpeed * delta);
-                bone.rotation.z += (btarget.z - bone.rotation.z) * Math.min(1, boneSmoothingSpeed * delta);
+                // Use easing-based blending during gesture transitions
+                const gs = gestureStateRef.current;
+                if (gs.active && gs.fromPose[boneName] && gs.toPose[boneName]) {
+                  // Calculate transition progress with easing
+                  const transitionDuration = gs.transitionSpeed;
+                  const transitionProgress = Math.min(1, gs.elapsed / transitionDuration);
+                  const easingFn = getEasingFunction(gs.easing);
+                  const easedProgress = easingFn(transitionProgress);
+                  
+                  // Blend from starting pose to target pose
+                  const from = gs.fromPose[boneName];
+                  const to = gs.toPose[boneName];
+                  bone.rotation.x = from.x + (to.x - from.x) * easedProgress;
+                  bone.rotation.y = from.y + (to.y - from.y) * easedProgress;
+                  bone.rotation.z = from.z + (to.z - from.z) * easedProgress;
+                } else {
+                  // Standard smoothing for non-gesture movements
+                  bone.rotation.x += (btarget.x - bone.rotation.x) * Math.min(1, boneSmoothingSpeed * delta);
+                  bone.rotation.y += (btarget.y - bone.rotation.y) * Math.min(1, boneSmoothingSpeed * delta);
+                  bone.rotation.z += (btarget.z - bone.rotation.z) * Math.min(1, boneSmoothingSpeed * delta);
+                }
               }
             }
 

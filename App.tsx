@@ -14,6 +14,18 @@ import {
   saveToStorage
 } from "./services/behaviorManager";
 import type { ModelBehaviors, BehaviorType, BehaviorConfigs } from "./types/behaviorTypes";
+import {
+  captureAndDownloadScreenshot,
+  createRecordingSession,
+  isMediaRecorderSupported,
+  downloadBlob,
+  generateFilename,
+} from "./utils/mediaCapture";
+import {
+  validateVrmFile,
+  createVrmObjectUrl,
+} from "./utils/vrmValidator";
+import type { CustomVrmEntry } from "./types/enhancementTypes";
 
 // localStorage keys for user preferences
 const STORAGE_KEYS = {
@@ -124,6 +136,18 @@ const App: React.FC = () => {
   });
   const [poseEditorOpen, setPoseEditorOpen] = useState(false);
   const [behaviorEditorOpen, setBehaviorEditorOpen] = useState(false);
+  
+  // Screenshot and recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingSessionRef = useRef<ReturnType<typeof createRecordingSession> | null>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  
+  // Custom VRM upload state
+  const [customVrms, setCustomVrms] = useState<CustomVrmEntry[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Per-model pose settings stored as { modelName: PoseSettings }
   const [allPoseSettings, setAllPoseSettings] = useState<Record<string, PoseSettings>>(() => {
@@ -398,6 +422,129 @@ const App: React.FC = () => {
       console.error("Fullscreen error:", e);
     }
   };
+
+  // Screenshot handler
+  const handleScreenshot = useCallback(async () => {
+    // Find the canvas element from NeuralCore
+    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+    if (!canvas) {
+      console.error('No canvas found for screenshot');
+      return;
+    }
+    
+    try {
+      await captureAndDownloadScreenshot({
+        canvas,
+        filename: generateFilename('aura-screenshot', 'png').replace('.png', ''),
+        format: 'png',
+      });
+    } catch (e) {
+      console.error('Screenshot failed:', e);
+    }
+  }, []);
+
+  // Recording handlers
+  const handleStartRecording = useCallback(() => {
+    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+    if (!canvas) {
+      console.error('No canvas found for recording');
+      return;
+    }
+    
+    if (!isMediaRecorderSupported()) {
+      setErrorMsg('Recording not supported in this browser');
+      return;
+    }
+    
+    try {
+      const session = createRecordingSession(canvas);
+      session.start();
+      recordingSessionRef.current = session;
+      setIsRecording(true);
+      setRecordingDuration(0);
+      
+      // Update duration every second
+      recordingIntervalRef.current = setInterval(() => {
+        if (recordingSessionRef.current) {
+          setRecordingDuration(Math.floor(recordingSessionRef.current.getDuration()));
+        }
+      }, 1000);
+    } catch (e) {
+      console.error('Failed to start recording:', e);
+      setErrorMsg('Failed to start recording');
+    }
+  }, []);
+
+  const handleStopRecording = useCallback(async () => {
+    if (!recordingSessionRef.current) return;
+    
+    try {
+      const blob = await recordingSessionRef.current.stop();
+      downloadBlob(blob, generateFilename('aura-recording', 'webm'));
+    } catch (e) {
+      console.error('Failed to stop recording:', e);
+    } finally {
+      recordingSessionRef.current = null;
+      setIsRecording(false);
+      setRecordingDuration(0);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  }, []);
+
+  // Custom VRM upload handler
+  const handleVrmUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setUploadError(null);
+    
+    try {
+      const result = await validateVrmFile(file);
+      
+      if (!result.valid) {
+        setUploadError(result.error || 'Invalid VRM file');
+        return;
+      }
+      
+      // Create object URL for the file
+      const objectUrl = createVrmObjectUrl(file);
+      const displayName = result.metadata?.name || file.name.replace('.vrm', '');
+      
+      // Store object URL in window for NeuralCore to access
+      if (!(window as any).__customVrmUrls) {
+        (window as any).__customVrmUrls = {};
+      }
+      (window as any).__customVrmUrls[displayName] = objectUrl;
+      
+      // Add to custom VRMs list
+      const newEntry: CustomVrmEntry = {
+        name: displayName,
+        objectUrl,
+        expressions: result.metadata?.expressions || [],
+        addedAt: Date.now(),
+      };
+      
+      setCustomVrms(prev => [...prev, newEntry]);
+      
+      // Add to available VRMs and select it
+      const vrmName = `custom:${displayName}`;
+      setAvailableVrms(prev => [...prev, vrmName]);
+      setSelectedVrm(vrmName);
+      
+      console.log('[App] Custom VRM loaded:', displayName, result.metadata);
+    } catch (e) {
+      console.error('Failed to upload VRM:', e);
+      setUploadError('Failed to load VRM file');
+    }
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, []);
 
   const handleConnect = async () => {
     if (!liveManagerRef.current) return;
@@ -715,6 +862,60 @@ const App: React.FC = () => {
 
         {/* Top-right: Settings and Fullscreen buttons */}
         <div className="absolute top-4 right-4 pointer-events-auto flex gap-2">
+          {/* Screenshot button */}
+          <button
+            type="button"
+            onClick={handleScreenshot}
+            className="hud-panel w-9 h-9 flex items-center justify-center hover:bg-white/5 transition-colors"
+            title="Take Screenshot"
+            aria-label="Take Screenshot">
+            <svg
+              className="w-4 h-4 text-cyan-400/80"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </button>
+
+          {/* Record button */}
+          <button
+            type="button"
+            onClick={isRecording ? handleStopRecording : handleStartRecording}
+            className={`hud-panel w-9 h-9 flex items-center justify-center hover:bg-white/5 transition-colors ${
+              isRecording ? 'border-red-500/50' : ''
+            }`}
+            title={isRecording ? `Stop Recording (${recordingDuration}s)` : 'Start Recording'}
+            aria-label={isRecording ? 'Stop Recording' : 'Start Recording'}>
+            {isRecording ? (
+              <div className="w-3 h-3 bg-red-500 rounded-sm animate-pulse" />
+            ) : (
+              <svg
+                className="w-4 h-4 text-cyan-400/80"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="3" fill="currentColor" />
+              </svg>
+            )}
+          </button>
+
+          {/* Recording indicator */}
+          {isRecording && (
+            <div className="hud-panel px-2 py-1 flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-[10px] text-red-400 font-mono">
+                {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:
+                {(recordingDuration % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+          )}
+
           {/* Fullscreen toggle */}
           <button
             type="button"
@@ -777,10 +978,32 @@ const App: React.FC = () => {
                     aria-label="Avatar model">
                     {availableVrms.map((v) => (
                       <option key={v} value={v}>
-                        {v.replace(".vrm", "").replace(/_/g, " ")}
+                        {v.startsWith('custom:') 
+                          ? `★ ${v.replace('custom:', '')}`
+                          : v.replace(".vrm", "").replace(/_/g, " ")}
                       </option>
                     ))}
                   </select>
+                  <div className="mt-1.5">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".vrm"
+                      onChange={handleVrmUpload}
+                      className="hidden"
+                      id="vrm-upload"
+                    />
+                    <label
+                      htmlFor="vrm-upload"
+                      className="block w-full py-1.5 text-[10px] tracking-widest text-center text-cyan-400/60 border border-cyan-500/20 hover:border-cyan-500/40 hover:text-cyan-400 rounded cursor-pointer transition-colors">
+                      UPLOAD CUSTOM VRM
+                    </label>
+                    {uploadError && (
+                      <div className="mt-1 text-[9px] text-red-400/80">
+                        {uploadError}
+                      </div>
+                    )}
+                  </div>
                 </SettingRow>
 
                 <SettingRow label="VOICE">

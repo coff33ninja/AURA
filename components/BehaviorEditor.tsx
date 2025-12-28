@@ -20,6 +20,8 @@ import {
   BoneRotation,
   FacialPreset,
 } from '../types/behaviorTypes';
+import type { BackgroundConfig, SolidBackground, GradientBackground } from '../types/enhancementTypes';
+import { BACKGROUND_PRESETS, isValidHexColor, saveBackgroundPreference, loadBackgroundPreference } from '../utils/backgroundRenderer';
 
 interface BehaviorEditorProps {
   isOpen: boolean;
@@ -33,9 +35,11 @@ interface BehaviorEditorProps {
   onExport: () => void;
   onImport: (file: File) => void;
   onSave: () => void;
+  backgroundConfig?: BackgroundConfig;
+  onBackgroundChange?: (config: BackgroundConfig) => void;
 }
 
-type TabType = 'transform' | 'body' | 'hands' | 'facial' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'import-export';
+type TabType = 'transform' | 'body' | 'hands' | 'facial' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'background' | 'import-export';
 
 const TABS: { id: TabType; label: string }[] = [
   { id: 'transform', label: 'Transform' },
@@ -47,6 +51,7 @@ const TABS: { id: TabType; label: string }[] = [
   { id: 'idle', label: 'Idle' },
   { id: 'lipsync', label: 'Lip Sync' },
   { id: 'reactions', label: 'Reactions' },
+  { id: 'background', label: 'Background' },
   { id: 'import-export', label: 'Import/Export' },
 ];
 
@@ -62,6 +67,8 @@ export function BehaviorEditor({
   onExport,
   onImport,
   onSave,
+  backgroundConfig,
+  onBackgroundChange,
 }: BehaviorEditorProps) {
   const [activeTab, setActiveTab] = useState<TabType>('transform');
 
@@ -223,6 +230,12 @@ export function BehaviorEditor({
                   currentHands={behaviors.hands}
                   currentFacial={behaviors.facial}
                   availableGestures={behaviors.gestures.gestures}
+                />
+              )}
+              {activeTab === 'background' && (
+                <BackgroundTab
+                  config={backgroundConfig}
+                  onChange={onBackgroundChange}
                 />
               )}
               {activeTab === 'import-export' && (
@@ -891,6 +904,43 @@ function GesturesTab({
                       </div>
                     );
                   })}
+
+                  {/* Finger Bones - show if any are defined */}
+                  {(() => {
+                    const fingerBoneNames = [
+                      'leftThumbProximal', 'leftThumbDistal',
+                      'leftIndexProximal', 'leftIndexIntermediate', 'leftIndexDistal',
+                      'leftMiddleProximal', 'leftMiddleIntermediate', 'leftMiddleDistal',
+                      'leftRingProximal', 'leftRingIntermediate', 'leftRingDistal',
+                      'leftLittleProximal', 'leftLittleIntermediate', 'leftLittleDistal',
+                      'rightThumbProximal', 'rightThumbDistal',
+                      'rightIndexProximal', 'rightIndexIntermediate', 'rightIndexDistal',
+                      'rightMiddleProximal', 'rightMiddleIntermediate', 'rightMiddleDistal',
+                      'rightRingProximal', 'rightRingIntermediate', 'rightRingDistal',
+                      'rightLittleProximal', 'rightLittleIntermediate', 'rightLittleDistal',
+                    ];
+                    const definedFingers = fingerBoneNames.filter(name => gesture.bones[name]);
+                    if (definedFingers.length === 0) return null;
+                    
+                    return (
+                      <>
+                        <div className="text-[9px] text-gray-400 mt-2">Finger Bones ({definedFingers.length})</div>
+                        <div className="max-h-32 overflow-y-auto">
+                          {definedFingers.map((boneName) => {
+                            const bone = gesture.bones[boneName];
+                            return (
+                              <div key={boneName} className="pl-1 mb-1">
+                                <span className="text-[8px] text-gray-500">{boneName.replace(/^(left|right)/, '$1 ').replace(/([A-Z])/g, ' $1').trim()}</span>
+                                <div className="flex gap-1 text-[8px] text-cyan-400">
+                                  X:{bone.x.toFixed(2)} Y:{bone.y.toFixed(2)} Z:{bone.z.toFixed(2)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   {/* Delete Button */}
                   <button
@@ -2070,6 +2120,181 @@ function FacialTab({
           >
             Save
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Background Tab - Scene background configuration
+function BackgroundTab({
+  config,
+  onChange,
+}: {
+  config?: BackgroundConfig;
+  onChange?: (config: BackgroundConfig) => void;
+}) {
+  // Load saved preference on mount if no config provided
+  const currentConfig = config || loadBackgroundPreference() || { type: 'solid' as const, color: '#000000' };
+  
+  const handleChange = useCallback((newConfig: BackgroundConfig) => {
+    saveBackgroundPreference(newConfig);
+    onChange?.(newConfig);
+  }, [onChange]);
+
+  const handleSolidColorChange = useCallback((color: string) => {
+    if (isValidHexColor(color)) {
+      handleChange({ type: 'solid', color });
+    }
+  }, [handleChange]);
+
+  const handleGradientChange = useCallback((colors: [string, string], angle: number) => {
+    if (isValidHexColor(colors[0]) && isValidHexColor(colors[1])) {
+      handleChange({ type: 'gradient', colors, angle });
+    }
+  }, [handleChange]);
+
+  return (
+    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+      {/* Background Type */}
+      <div>
+        <SectionHeader title="Type" />
+        <div className="flex gap-1 flex-wrap">
+          {(['solid', 'gradient'] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => {
+                if (type === 'solid') {
+                  handleChange({ type: 'solid', color: '#000000' });
+                } else {
+                  handleChange({ type: 'gradient', colors: ['#0f0c29', '#302b63'], angle: 180 });
+                }
+              }}
+              className={`px-2 py-0.5 text-[9px] rounded transition-colors ${
+                currentConfig.type === type
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+              }`}
+            >
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Solid Color Controls */}
+      {currentConfig.type === 'solid' && (
+        <div>
+          <SectionHeader title="Color" />
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={(currentConfig as SolidBackground).color}
+              onChange={(e) => handleSolidColorChange(e.target.value)}
+              className="w-8 h-8 rounded cursor-pointer border border-gray-600"
+              aria-label="Background color"
+            />
+            <input
+              type="text"
+              value={(currentConfig as SolidBackground).color}
+              onChange={(e) => handleSolidColorChange(e.target.value)}
+              className="flex-1 px-2 py-1 text-[10px] bg-gray-800 border border-gray-600 rounded text-gray-200"
+              placeholder="#000000"
+              aria-label="Background color hex"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Gradient Controls */}
+      {currentConfig.type === 'gradient' && (
+        <>
+          <div>
+            <SectionHeader title="Top Color" />
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={(currentConfig as GradientBackground).colors[0]}
+                onChange={(e) => handleGradientChange(
+                  [e.target.value, (currentConfig as GradientBackground).colors[1]],
+                  (currentConfig as GradientBackground).angle
+                )}
+                className="w-8 h-8 rounded cursor-pointer border border-gray-600"
+                aria-label="Gradient top color"
+              />
+              <input
+                type="text"
+                value={(currentConfig as GradientBackground).colors[0]}
+                onChange={(e) => handleGradientChange(
+                  [e.target.value, (currentConfig as GradientBackground).colors[1]],
+                  (currentConfig as GradientBackground).angle
+                )}
+                className="flex-1 px-2 py-1 text-[10px] bg-gray-800 border border-gray-600 rounded text-gray-200"
+                aria-label="Gradient top color hex"
+              />
+            </div>
+          </div>
+          <div>
+            <SectionHeader title="Bottom Color" />
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={(currentConfig as GradientBackground).colors[1]}
+                onChange={(e) => handleGradientChange(
+                  [(currentConfig as GradientBackground).colors[0], e.target.value],
+                  (currentConfig as GradientBackground).angle
+                )}
+                className="w-8 h-8 rounded cursor-pointer border border-gray-600"
+                aria-label="Gradient bottom color"
+              />
+              <input
+                type="text"
+                value={(currentConfig as GradientBackground).colors[1]}
+                onChange={(e) => handleGradientChange(
+                  [(currentConfig as GradientBackground).colors[0], e.target.value],
+                  (currentConfig as GradientBackground).angle
+                )}
+                className="flex-1 px-2 py-1 text-[10px] bg-gray-800 border border-gray-600 rounded text-gray-200"
+                aria-label="Gradient bottom color hex"
+              />
+            </div>
+          </div>
+          <div>
+            <SectionHeader title="Angle" />
+            <Slider
+              label="Degrees"
+              value={(currentConfig as GradientBackground).angle}
+              min={0}
+              max={360}
+              step={15}
+              onChange={(angle) => handleGradientChange(
+                (currentConfig as GradientBackground).colors,
+                angle
+              )}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Presets */}
+      <div>
+        <SectionHeader title="Presets" />
+        <div className="flex gap-1 flex-wrap">
+          {Object.entries(BACKGROUND_PRESETS).map(([name, preset]) => {
+            const indicatorColor = preset.type === 'solid' 
+              ? (preset as SolidBackground).color 
+              : (preset as GradientBackground).colors[0];
+            return (
+              <button
+                key={name}
+                onClick={() => handleChange(preset)}
+                className="bg-preset-btn px-2 py-0.5 text-[9px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
+                style={{ borderLeftColor: indicatorColor }}
+              >
+                {name.charAt(0).toUpperCase() + name.slice(1)}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
