@@ -65,30 +65,27 @@ export class LiveManager {
 
     public async setVoiceModel(voiceName: string) {
         this.voiceName = voiceName;
-        if (this.sessionPromise) {
-            await this.reconnect();
-        }
+        console.log('[LiveManager] Voice model set to:', voiceName);
+        // Don't auto-reconnect - let user reconnect manually to apply changes
     }
 
     public async setModelName(modelName: string) {
         this.modelName = modelName;
-        if (this.sessionPromise) {
-            await this.reconnect();
-        }
+        console.log('[LiveManager] Model name set to:', modelName);
+        // Don't auto-reconnect - let user reconnect manually to apply changes
     }
 
     public async setPersonality(instruction: string | null) {
         this.personalityInstruction = instruction;
-        if (this.sessionPromise) {
-            await this.reconnect();
-        }
+        console.log('[LiveManager] Personality set to:', instruction ? 'custom' : 'default');
+        // Don't auto-reconnect - let user reconnect manually to apply changes
     }
 
     public async setVrmExpressions(expressions: string[]) {
         this.availableExpressions = expressions;
-        if (this.sessionPromise) {
-            await this.reconnect();
-        }
+        // Don't reconnect for expression changes - they're only used in system instruction
+        // which is set at connection time. User can reconnect manually if needed.
+        console.log('[LiveManager] VRM expressions updated:', expressions.length, 'expressions');
     }
 
     private async reconnect() {
