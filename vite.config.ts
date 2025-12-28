@@ -41,7 +41,11 @@ function vrmModelsPlugin() {
 }
 
 export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
+    // Load env from current directory, with empty prefix to get all vars
+    const env = loadEnv(mode, process.cwd(), '');
+    
+    console.log('Loaded GEMINI_API_KEYS:', env.GEMINI_API_KEYS ? 'Found' : 'NOT FOUND');
+    
     return {
       server: {
         port: 3000,
@@ -49,7 +53,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react(), basicSsl(), vrmModelsPlugin()],
       define: {
-        'process.env.GEMINI_API_KEYS': JSON.stringify(env.GEMINI_API_KEYS)
+        'process.env.GEMINI_API_KEYS': JSON.stringify(env.GEMINI_API_KEYS || '')
       },
       build: {
         chunkSizeWarningLimit: 1500,
