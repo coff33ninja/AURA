@@ -1,0 +1,11 @@
+{
+  "leftUpperArm": { "x": 0, "y": 0, "z": 30 },
+  "rightUpperArm": { "x": 0, "y": 0, "z": -30 },
+  "leftLowerArm": { "x": 0, "y": 0, "z": 0 },
+  "rightLowerArm": { "x": 0, "y": 0, "z": 0 },
+  "leftHand": { "x": 0, "y": 0, "z": 0 },
+  "rightHand": { "x": 0, "y": 0, "z": 0 },
+  "spine": { "x": 0, "y": 0, "z": 0 },
+  "chest": { "x": 0, "y": 0, "z": 0 },
+  "eyeTracking": { "enabled": true, "intensity": 0.7 }
+}

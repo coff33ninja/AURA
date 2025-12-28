@@ -393,12 +393,37 @@ function BodyTab({
   config: BodyConfig;
   onChange: (config: Partial<BodyConfig>) => void;
 }) {
-  // Helper to convert degrees to radians for display
-  const degToRad = (deg: number) => (deg * Math.PI) / 180;
-  const radToDeg = (rad: number) => (rad * 180) / Math.PI;
+  // Use callbacks that capture the full current config to avoid stale closures
+  const updateLeftUpperArm = useCallback((field: 'x' | 'y' | 'z', value: number) => {
+    onChange({ leftUpperArm: { x: config.leftUpperArm.x, y: config.leftUpperArm.y, z: config.leftUpperArm.z, [field]: value } });
+  }, [onChange, config.leftUpperArm.x, config.leftUpperArm.y, config.leftUpperArm.z]);
+
+  const updateLeftLowerArm = useCallback((field: 'x' | 'y' | 'z', value: number) => {
+    onChange({ leftLowerArm: { x: config.leftLowerArm.x, y: config.leftLowerArm.y, z: config.leftLowerArm.z, [field]: value } });
+  }, [onChange, config.leftLowerArm.x, config.leftLowerArm.y, config.leftLowerArm.z]);
+
+  const updateRightUpperArm = useCallback((field: 'x' | 'y' | 'z', value: number) => {
+    onChange({ rightUpperArm: { x: config.rightUpperArm.x, y: config.rightUpperArm.y, z: config.rightUpperArm.z, [field]: value } });
+  }, [onChange, config.rightUpperArm.x, config.rightUpperArm.y, config.rightUpperArm.z]);
+
+  const updateRightLowerArm = useCallback((field: 'x' | 'y' | 'z', value: number) => {
+    onChange({ rightLowerArm: { x: config.rightLowerArm.x, y: config.rightLowerArm.y, z: config.rightLowerArm.z, [field]: value } });
+  }, [onChange, config.rightLowerArm.x, config.rightLowerArm.y, config.rightLowerArm.z]);
+
+  const updateSpine = useCallback((field: 'x' | 'y' | 'z', value: number) => {
+    onChange({ spine: { x: config.spine.x, y: config.spine.y, z: config.spine.z, [field]: value } });
+  }, [onChange, config.spine.x, config.spine.y, config.spine.z]);
+
+  const updateChest = useCallback((field: 'x' | 'y' | 'z', value: number) => {
+    onChange({ chest: { x: config.chest.x, y: config.chest.y, z: config.chest.z, [field]: value } });
+  }, [onChange, config.chest.x, config.chest.y, config.chest.z]);
+
+  const updateEyeTracking = useCallback((field: 'enabled' | 'intensity', value: boolean | number) => {
+    onChange({ eyeTracking: { enabled: config.eyeTracking.enabled, intensity: config.eyeTracking.intensity, [field]: value } });
+  }, [onChange, config.eyeTracking.enabled, config.eyeTracking.intensity]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
       <div>
         <SectionHeader title="Left Arm" />
         <Slider
@@ -407,7 +432,7 @@ function BodyTab({
           min={-90}
           max={90}
           step={1}
-          onChange={(x) => onChange({ leftUpperArm: { ...config.leftUpperArm, x } })}
+          onChange={(x) => updateLeftUpperArm('x', x)}
         />
         <Slider
           label="Upper Y"
@@ -415,7 +440,7 @@ function BodyTab({
           min={-90}
           max={90}
           step={1}
-          onChange={(y) => onChange({ leftUpperArm: { ...config.leftUpperArm, y } })}
+          onChange={(y) => updateLeftUpperArm('y', y)}
         />
         <Slider
           label="Upper Z"
@@ -423,7 +448,7 @@ function BodyTab({
           min={-90}
           max={90}
           step={1}
-          onChange={(z) => onChange({ leftUpperArm: { ...config.leftUpperArm, z } })}
+          onChange={(z) => updateLeftUpperArm('z', z)}
         />
         <Slider
           label="Lower X"
@@ -431,7 +456,7 @@ function BodyTab({
           min={-90}
           max={90}
           step={1}
-          onChange={(x) => onChange({ leftLowerArm: { ...config.leftLowerArm, x } })}
+          onChange={(x) => updateLeftLowerArm('x', x)}
         />
       </div>
 
@@ -443,7 +468,7 @@ function BodyTab({
           min={-90}
           max={90}
           step={1}
-          onChange={(x) => onChange({ rightUpperArm: { ...config.rightUpperArm, x } })}
+          onChange={(x) => updateRightUpperArm('x', x)}
         />
         <Slider
           label="Upper Y"
@@ -451,7 +476,7 @@ function BodyTab({
           min={-90}
           max={90}
           step={1}
-          onChange={(y) => onChange({ rightUpperArm: { ...config.rightUpperArm, y } })}
+          onChange={(y) => updateRightUpperArm('y', y)}
         />
         <Slider
           label="Upper Z"
@@ -459,7 +484,7 @@ function BodyTab({
           min={-90}
           max={90}
           step={1}
-          onChange={(z) => onChange({ rightUpperArm: { ...config.rightUpperArm, z } })}
+          onChange={(z) => updateRightUpperArm('z', z)}
         />
         <Slider
           label="Lower X"
@@ -467,7 +492,7 @@ function BodyTab({
           min={-90}
           max={90}
           step={1}
-          onChange={(x) => onChange({ rightLowerArm: { ...config.rightLowerArm, x } })}
+          onChange={(x) => updateRightLowerArm('x', x)}
         />
       </div>
 
@@ -479,7 +504,7 @@ function BodyTab({
           min={-45}
           max={45}
           step={1}
-          onChange={(x) => onChange({ spine: { ...config.spine, x } })}
+          onChange={(x) => updateSpine('x', x)}
         />
         <Slider
           label="Spine Y"
@@ -487,7 +512,7 @@ function BodyTab({
           min={-45}
           max={45}
           step={1}
-          onChange={(y) => onChange({ spine: { ...config.spine, y } })}
+          onChange={(y) => updateSpine('y', y)}
         />
         <Slider
           label="Chest X"
@@ -495,7 +520,7 @@ function BodyTab({
           min={-30}
           max={30}
           step={1}
-          onChange={(x) => onChange({ chest: { ...config.chest, x } })}
+          onChange={(x) => updateChest('x', x)}
         />
       </div>
 
@@ -504,14 +529,14 @@ function BodyTab({
         <Toggle
           label="Enabled"
           checked={config.eyeTracking.enabled}
-          onChange={(enabled) => onChange({ eyeTracking: { ...config.eyeTracking, enabled } })}
+          onChange={(enabled) => updateEyeTracking('enabled', enabled)}
         />
         <Slider
           label="Intensity"
           value={config.eyeTracking.intensity}
           min={0}
           max={1}
-          onChange={(intensity) => onChange({ eyeTracking: { ...config.eyeTracking, intensity } })}
+          onChange={(intensity) => updateEyeTracking('intensity', intensity)}
         />
       </div>
 
