@@ -329,7 +329,8 @@ const App: React.FC = () => {
     const unsubscribeChanged = onBehaviorChanged(() => {
       const behaviors = getCurrentBehaviors();
       if (behaviors) {
-        setCurrentBehaviors(behaviors);
+        // Create a new object reference to trigger React re-render
+        setCurrentBehaviors({ ...behaviors });
         if (liveManagerRef.current) {
           liveManagerRef.current.setBehaviors(behaviors);
         }

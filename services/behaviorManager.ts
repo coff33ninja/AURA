@@ -95,8 +95,11 @@ export function updateBehavior<T extends BehaviorType>(
   const currentConfig = currentBehaviors[type] as BehaviorConfigs[T];
   const updatedConfig = deepMergeConfig(currentConfig, config);
   
-  // Update current behaviors
-  (currentBehaviors as any)[type] = updatedConfig;
+  // Create a new behaviors object to ensure React detects the change
+  currentBehaviors = {
+    ...currentBehaviors,
+    [type]: updatedConfig,
+  };
   
   // Notify listeners
   for (const callback of onBehaviorChangedCallbacks) {
