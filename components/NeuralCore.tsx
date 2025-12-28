@@ -9,6 +9,7 @@ import {
   onBehaviorChanged 
 } from '../services/behaviorManager';
 import { getGlobalVrmModelManager } from '../services/vrmModelManager';
+import { calculateLodLevel, applyLodSettings, shouldUpdateLod, DEFAULT_LOD_CONFIG, type LodLevel } from '../utils/lodManager';
 import type { 
   ModelBehaviors,
   GestureDefinition, 
@@ -64,6 +65,9 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
 
   // Scenery Refs
   const particlesRef = useRef<THREE.Points | null>(null);
+  const lightsRef = useRef<THREE.Light[]>([]);
+  const currentLodLevelRef = useRef<LodLevel | null>(null);
+  const baseParticleCountRef = useRef<number>(150); // Base particle count for LOD scaling
   
   // State for loading
   const [isLoading, setIsLoading] = useState(true);
@@ -751,6 +755,9 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     rimLight.position.set(0, 2, -2);
     rimLight.lookAt(0, 1, 0);
     scene.add(rimLight);
+    
+    // Store lights for LOD management
+    lightsRef.current = [directionalLight, rimLight];
 
     // 3. Environment / Aura (The "Brain" remnants)
     
@@ -759,6 +766,7 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     // Particles (Data stream)
     const particleGeo = new THREE.BufferGeometry();
     const particleCount = 150;
+    baseParticleCountRef.current = particleCount;
     const posArray = new Float32Array(particleCount * 3);
     for(let i=0; i<particleCount * 3; i++) {
         posArray[i] = (Math.random() - 0.5) * 3;
@@ -1466,6 +1474,23 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
           
           // Update lookAt target
           cam.lookAt(lookAt.x, lookAt.y, lookAt.z);
+          
+          // LOD System - adjust quality based on camera distance
+          if (vrmRef.current && sceneRef.current) {
+            const vrmPosition = vrmRef.current.scene.position;
+            const cameraDistance = cam.position.distanceTo(vrmPosition);
+            const newLodLevel = calculateLodLevel(cameraDistance, DEFAULT_LOD_CONFIG);
+            
+            // Only apply LOD changes if level changed significantly
+            if (!currentLodLevelRef.current || shouldUpdateLod(currentLodLevelRef.current, newLodLevel)) {
+              applyLodSettings(sceneRef.current, newLodLevel, {
+                particleSystem: particlesRef.current || undefined,
+                baseParticleCount: baseParticleCountRef.current,
+                lights: lightsRef.current,
+              });
+              currentLodLevelRef.current = newLodLevel;
+            }
+          }
         }
         
         if (particlesRef.current) {
