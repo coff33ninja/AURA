@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ConnectionState } from './types';
 import { LiveManager, VrmCommand } from './services/liveManager';
 import { NeuralCore } from './components/NeuralCore';
+import { conversationStore } from './services/conversationStore';
 
 // localStorage keys for user preferences
 const STORAGE_KEYS = {
@@ -51,10 +52,18 @@ const App: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [textChatEnabled, setTextChatEnabled] = useState(false);
   const [chatInput, setChatInput] = useState('');
+  const [memoryStats, setMemoryStats] = useState({ totalMessages: 0, totalSessions: 0 });
 
   const liveVolumeRef = useRef<number>(0);
   const liveMicVolumeRef = useRef<number>(0);
   const chatInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize conversation store
+  useEffect(() => {
+    conversationStore.init().then(() => {
+      conversationStore.getStats().then(setMemoryStats);
+    }).catch(e => console.error('Failed to init conversation store:', e));
+  }, []);
 
   // Save preferences to localStorage when they change
   useEffect(() => { if (selectedVrm) localStorage.setItem(STORAGE_KEYS.selectedVrm, selectedVrm); }, [selectedVrm]);
@@ -202,10 +211,12 @@ const App: React.FC = () => {
     if (liveManagerRef.current) liveManagerRef.current.disconnect();
   };
 
-  const handleSendText = () => {
+  const handleSendText = async () => {
     if (!chatInput.trim() || !liveManagerRef.current || !isConnected) return;
-    liveManagerRef.current.sendText(chatInput.trim());
+    await liveManagerRef.current.sendText(chatInput.trim());
     setChatInput('');
+    // Update memory stats
+    conversationStore.getStats().then(setMemoryStats);
   };
 
   const isConnected = connectionState === ConnectionState.CONNECTED;
@@ -403,6 +414,26 @@ const App: React.FC = () => {
                   >
                     {textChatEnabled ? 'ENABLED' : 'DISABLED'}
                   </button>
+                </SettingRow>
+
+                <SettingRow label="MEMORY">
+                  <div className="space-y-1">
+                    <div className="text-[9px] text-cyan-500/50">
+                      {memoryStats.totalMessages} messages • {memoryStats.totalSessions} sessions
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (confirm('Clear all conversation history? This cannot be undone.')) {
+                          await conversationStore.clearHistory();
+                          setMemoryStats({ totalMessages: 0, totalSessions: 0 });
+                        }
+                      }}
+                      className="w-full py-1.5 text-[10px] tracking-widest text-red-400/60 border border-red-500/20 hover:border-red-500/40 hover:text-red-400 rounded transition-colors"
+                    >
+                      CLEAR HISTORY
+                    </button>
+                  </div>
                 </SettingRow>
               </div>
 

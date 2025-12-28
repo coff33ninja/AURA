@@ -1,5 +1,6 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { base64ToUint8Array, decodeAudioData, floatTo16BitPCM, arrayBufferToBase64, downsampleBuffer } from "../utils/audioUtils";
+import { conversationStore } from "./conversationStore";
 
 // VrmCommand types for app wiring
 export type VrmCommand =
@@ -103,6 +104,9 @@ export class LiveManager {
         }
         
         try {
+            // Save user message to conversation history
+            await conversationStore.saveMessage('user', text);
+            
             const session = await this.sessionPromise;
             // Send text as a client content turn
             await session.sendClientContent({
@@ -251,15 +255,24 @@ export class LiveManager {
                 this.client = new GoogleGenAI({ apiKey });
                 console.log('[LiveManager] GoogleGenAI client created, connecting to live session...');
                 
-                // Build system instruction
-                const systemInstruction = this.personalityInstruction 
+                // Get conversation history for context
+                const conversationHistory = await conversationStore.getConversationSummary(10);
+                
+                // Build system instruction with memory
+                let systemInstruction = this.personalityInstruction 
                     ? `You are Aura, a helpful AI assistant. ${this.personalityInstruction}`
                     : `You are Aura, a friendly and helpful AI assistant with an expressive personality. Speak naturally and conversationally.`;
+                
+                // Add conversation history if available
+                if (conversationHistory) {
+                    systemInstruction += `\n\nYou have memory of past conversations with this user. Use this context to provide more personalized responses, but don't explicitly mention "remembering" unless relevant.\n\n${conversationHistory}`;
+                }
                 
                 console.log('[LiveManager] Config:', {
                     model: this.modelName,
                     voice: this.voiceName,
-                    systemInstructionLength: systemInstruction.length
+                    systemInstructionLength: systemInstruction.length,
+                    hasConversationHistory: !!conversationHistory
                 });
                 
                 this.sessionPromise = this.client.live.connect({
@@ -383,6 +396,10 @@ export class LiveManager {
                                 const commandPattern = /\[(?:COMMAND|EMOTION):[^\]]+\]/g;
                                 const cleanText = textContent.replace(commandPattern, '').trim();
                                 if (cleanText) {
+                                    // Save AI response to conversation history
+                                    conversationStore.saveMessage('assistant', cleanText).catch(e => 
+                                        console.warn('[LiveManager] Failed to save AI response:', e)
+                                    );
                                     this.onTextReceived(cleanText);
                                 }
                             }
