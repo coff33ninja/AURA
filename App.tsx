@@ -195,7 +195,7 @@ const App: React.FC = () => {
       </div>
 
       {/* UI Overlay */}
-      <div className="relative w-full z-20 p-6 flex flex-col items-center gap-6 bg-gradient-to-t from-black via-black/80 to-transparent pt-20">
+      <div className="relative w-full z-20 p-4 flex flex-col items-center gap-2 bg-gradient-to-t from-black via-black/80 to-transparent justify-end">
         
         {/* Status Display */}
         <div className="flex flex-col items-center gap-2">
@@ -247,22 +247,7 @@ const App: React.FC = () => {
             <p>Voice data is processed in real-time by Gemini 2.5 Flash.</p>
         </div>
 
-        {/* Debug: manual VRM command sender */}
-        <div className="mt-4 w-full max-w-md">
-          <div className="text-xs text-slate-400 mb-1">Debug VRM Command (JSON)</div>
-          <textarea value={debugCmdText} onChange={(e) => setDebugCmdText(e.target.value)} className="w-full h-20 bg-transparent border border-slate-800 rounded px-2 py-1 text-xs text-cyan-100" />
-          <div className="flex gap-2 mt-2">
-            <button onClick={() => {
-              try {
-                const parsed = JSON.parse(debugCmdText) as any;
-                setVrmCommand(parsed);
-              } catch (e) { alert('Invalid JSON'); }
-            }} className="px-3 py-2 bg-cyan-700/20 border border-cyan-600 rounded text-xs">Send</button>
-            <button onClick={() => { setDebugCmdText(JSON.stringify({ type: 'EXPRESSION', name: 'aa', value: 1.0 }, null, 2)); }} className="px-3 py-2 bg-cyan-700/20 border border-cyan-600 rounded text-xs">Preset: Mouth Open</button>
-            <button onClick={() => { setDebugCmdText(JSON.stringify({ type: 'BONE_ROT', bone: 'head', x: 0.2, y: 0.1, z: 0 }, null, 2)); }} className="px-3 py-2 bg-cyan-700/20 border border-cyan-600 rounded text-xs">Preset: Head Turn</button>
-          </div>
         </div>
-      </div>
     </div>
   );
 };

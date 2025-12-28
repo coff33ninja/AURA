@@ -1021,7 +1021,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         <video ref={videoRef} className="absolute w-0 h-0 invisible" playsInline muted />
         <div ref={mountRef} className="w-full h-full" />
         {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center pointer-events-none">
                 <div className="text-cyan-400 font-mono animate-pulse">
                     LOADING BIOMETRIC AVATAR...
                 </div>
