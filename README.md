@@ -138,6 +138,8 @@ Each emotion triggers coordinated, multi-system reactions:
 
 Each avatar loads with its own expression set automatically extracted from sidecar files.
 
+*Disclaimer: The VRM models currently used are for testing purposes only. I do not have information about their original creators. These models will either be replaced with original creations or removed entirely in future iterations as this project is currently in the experimental phase.*
+
 ### 💬 **3 Personality Profiles**
 - **Default Aura** - Balanced, natural conversationalist
 - **Witty Assistant** - Playful, concise, entertaining
