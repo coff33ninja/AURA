@@ -13,16 +13,10 @@ const App: React.FC = () => {
   
   const liveManagerRef = useRef<LiveManager | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const availableVrms = [
-    'Arlecchino-Battle_look.vrm',
-    'Arlecchino-Normal_look.vrm',
-    'AvatarSample_D.vrm',
-    'Furina.vrm',
-    'Hu_Tao.vrm',
-    'Navia.vrm',
-    'Skirk.vrm'
-  ];
-  const [selectedVrm, setSelectedVrm] = useState<string>(availableVrms[1]);
+  
+  // Dynamic VRM model loading
+  const [availableVrms, setAvailableVrms] = useState<string[]>([]);
+  const [selectedVrm, setSelectedVrm] = useState<string>('');
 
   const voiceModels = ['Kore', 'Ava', 'Deep', 'Neutral'];
   const [selectedVoice, setSelectedVoice] = useState<string>(voiceModels[0]);
@@ -36,6 +30,24 @@ const App: React.FC = () => {
   const [selectedMode, setSelectedMode] = useState<'ACTIVE' | 'PASSIVE'>('ACTIVE');
 
   const liveVolumeRef = useRef<number>(0);
+
+  // Load available VRM models on mount
+  useEffect(() => {
+    fetch('/api/vrm-models')
+      .then(res => res.json())
+      .then((models: string[]) => {
+        if (models.length > 0) {
+          setAvailableVrms(models);
+          setSelectedVrm(models[0]);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load VRM models:', err);
+        // Fallback to a default if API fails
+        setAvailableVrms(['AvatarSample_D.vrm']);
+        setSelectedVrm('AvatarSample_D.vrm');
+      });
+  }, []);
 
   useEffect(() => {
     if (!process.env.GEMINI_API_KEYS) {
@@ -102,13 +114,15 @@ const App: React.FC = () => {
       
       {/* 3D Scene - Full bleed */}
       <div className="absolute inset-0 z-0">
-        <NeuralCore 
-          volume={volume} 
-          isActive={isConnected}
-          vrmCommand={vrmCommand}
-          vrmModel={selectedVrm}
-          onVrmExpressionsLoaded={setVrmExpressions}
-        />
+        {selectedVrm && (
+          <NeuralCore 
+            volume={volume} 
+            isActive={isConnected}
+            vrmCommand={vrmCommand}
+            vrmModel={selectedVrm}
+            onVrmExpressionsLoaded={setVrmExpressions}
+          />
+        )}
       </div>
 
       {/* HUD Overlay Layer */}

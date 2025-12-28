@@ -78,22 +78,44 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
   const walkStateRef = useRef({ speed: 0, direction: 0, isWalking: false, position: { x: 0, y: 0, z: 0 } });
   const legAngleRef = useRef(0); // For procedural leg animation
 
-  // Resolve an expression alias to actual VRM expression names using the loaded sidecar.
+  // Resolve an expression alias (presetName like 'joy') to actual VRM expression names
+  // This allows Gemini to use consistent names across all models
   const resolveExpressionAlias = (alias: string): string[] => {
     try {
       const sc = sidecarRef.current;
-      if (!sc) return [alias];
-      // exact match
-      if (sc.groups && sc.groups[alias]) return [alias];
-      // mappings created during patching: alias -> [realName...]
+      if (!sc || !sc.groups) return [alias];
+      
+      const lowerAlias = alias.toLowerCase();
+      const results: string[] = [];
+      
+      // First: find by presetName (most reliable for cross-model consistency)
+      for (const [groupName, groupData] of Object.entries(sc.groups)) {
+        const preset = (groupData as any).presetName?.toLowerCase();
+        if (preset === lowerAlias) {
+          results.push(groupName);
+        }
+      }
+      if (results.length > 0) return results;
+      
+      // Second: exact match on group name
+      if (sc.groups[alias]) return [alias];
+      
+      // Third: check mappings from patching
       if (sc.mappings && sc.mappings[alias]) return sc.mappings[alias];
-      // case-insensitive match
-      const keys = Object.keys(sc.groups || {});
-      const lower = alias.toLowerCase();
-      const matches = keys.filter(k => k.toLowerCase() === lower || k.toLowerCase().includes(lower) || lower.includes(k.toLowerCase()));
-      if (matches.length) return matches;
+      
+      // Fourth: case-insensitive match on group name
+      const keys = Object.keys(sc.groups);
+      const matches = keys.filter(k => k.toLowerCase() === lowerAlias);
+      if (matches.length > 0) return matches;
+      
+      // Fallback: partial match
+      const partialMatches = keys.filter(k => 
+        k.toLowerCase().includes(lowerAlias) || lowerAlias.includes(k.toLowerCase())
+      );
+      if (partialMatches.length > 0) return partialMatches;
+      
     } catch (e) {
-      // ignore
+      console.warn('Error resolving expression alias:', alias, e);
     }
     return [alias];
   };
@@ -884,14 +906,31 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         sidecarRef.current = data;
         console.log('Loaded expression sidecar for', vrmModel, data);
         
-        // Extract actual expression names from the sidecar and notify parent
+        // Extract standardized expression names using presetName for consistency across models
+        // This ensures Gemini always uses the same names (joy, angry, sorrow, etc.) regardless of model
         if (data && data.groups && typeof data.groups === 'object') {
-          const expressionNames = Object.keys(data.groups);
-          console.log('Available expressions from sidecar:', expressionNames);
-          onVrmExpressionsLoaded(expressionNames);
+          const presetNames = new Set<string>();
+          const groups = data.groups;
+          
+          // Build a mapping from presetName -> actual expression name
+          // and collect unique presetNames for Gemini
+          for (const [groupName, groupData] of Object.entries(groups)) {
+            const preset = (groupData as any).presetName;
+            if (preset && preset !== 'unknown' && preset !== 'neutral') {
+              presetNames.add(preset);
+            }
+          }
+          
+          // Standard VRM expression presets that Gemini should know about
+          const standardPresets = ['joy', 'angry', 'sorrow', 'fun', 'a', 'i', 'u', 'e', 'o', 'blink'];
+          const availablePresets = standardPresets.filter(p => presetNames.has(p));
+          
+          console.log('Available expression presets:', availablePresets);
+          onVrmExpressionsLoaded(availablePresets);
         }
       } catch (e) {
-        // ignore
+        // No sidecar - use defaults
+        onVrmExpressionsLoaded(['joy', 'angry', 'sorrow', 'fun', 'blink', 'a', 'i', 'u', 'e', 'o']);
       }
     })();
 
