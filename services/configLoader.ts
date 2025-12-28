@@ -6,6 +6,7 @@ import {
   BehaviorConfigs,
   ModelBehaviors,
   TransformConfig,
+  BodyConfig,
   GesturesConfig,
   IdleConfig,
   LipSyncConfig,
@@ -14,6 +15,7 @@ import {
   getDefaultConfig,
   deepMergeConfig,
   isValidTransformConfig,
+  isValidBodyConfig,
   isValidGesturesConfig,
   isValidIdleConfig,
   isValidLipSyncConfig,
@@ -55,6 +57,8 @@ function validateConfig(type: BehaviorType, config: unknown): boolean {
   switch (type) {
     case 'transform':
       return isValidTransformConfig(config);
+    case 'body':
+      return isValidBodyConfig(config);
     case 'gestures':
       return isValidGesturesConfig(config);
     case 'idle':
@@ -133,7 +137,7 @@ export async function loadConfig<T extends BehaviorType>(
  * Load all configs for a model in parallel
  */
 export async function loadAllConfigs(modelName: string): Promise<ModelBehaviors> {
-  const types: BehaviorType[] = ['transform', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
+  const types: BehaviorType[] = ['transform', 'body', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
   
   const results = await Promise.all(
     types.map(type => loadConfig(modelName, type))
@@ -143,11 +147,12 @@ export async function loadAllConfigs(modelName: string): Promise<ModelBehaviors>
     modelName,
     version: '1.0.0',
     transform: results[0] as TransformConfig,
-    expressions: results[1] as ExpressionsConfig,
-    gestures: results[2] as GesturesConfig,
-    idle: results[3] as IdleConfig,
-    lipsync: results[4] as LipSyncConfig,
-    reactions: results[5] as ReactionsConfig,
+    body: results[1] as BodyConfig,
+    expressions: results[2] as ExpressionsConfig,
+    gestures: results[3] as GesturesConfig,
+    idle: results[4] as IdleConfig,
+    lipsync: results[5] as LipSyncConfig,
+    reactions: results[6] as ReactionsConfig,
   };
 }
 
@@ -175,7 +180,7 @@ export function clearCache(): void {
  * Clear cache for a specific model
  */
 export function clearModelCache(modelName: string): void {
-  const types: BehaviorType[] = ['transform', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
+  const types: BehaviorType[] = ['transform', 'body', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
   for (const type of types) {
     configCache.delete(getCacheKey(modelName, type));
   }

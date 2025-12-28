@@ -9,6 +9,7 @@ import {
   deepMergeConfig,
   createDefaultModelBehaviors,
   isValidTransformConfig,
+  isValidBodyConfig,
   isValidGesturesConfig,
   isValidIdleConfig,
   isValidLipSyncConfig,
@@ -53,6 +54,7 @@ export async function loadModelBehaviors(modelName: string): Promise<ModelBehavi
     currentBehaviors = {
       ...fileBehaviors,
       transform: deepMergeConfig(fileBehaviors.transform, storageOverrides.transform || {}),
+      body: deepMergeConfig(fileBehaviors.body, storageOverrides.body || {}),
       expressions: deepMergeConfig(fileBehaviors.expressions, storageOverrides.expressions || {}),
       gestures: deepMergeConfig(fileBehaviors.gestures, storageOverrides.gestures || {}),
       idle: deepMergeConfig(fileBehaviors.idle, storageOverrides.idle || {}),
@@ -173,6 +175,10 @@ function validateBehaviorConfig(type: BehaviorType, config: unknown): Validation
       isValid = isValidTransformConfig(config);
       if (!isValid) errors.push('Invalid transform config: missing required fields');
       break;
+    case 'body':
+      isValid = isValidBodyConfig(config);
+      if (!isValid) errors.push('Invalid body config: missing required fields');
+      break;
     case 'gestures':
       isValid = isValidGesturesConfig(config);
       if (!isValid) errors.push('Invalid gestures config: gestures must be an array');
@@ -229,7 +235,7 @@ export function importConfig(json: string): ValidationResult {
   }
   
   // Validate each behavior type
-  const types: BehaviorType[] = ['transform', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
+  const types: BehaviorType[] = ['transform', 'body', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
   for (const type of types) {
     if (config[type]) {
       const result = validateBehaviorConfig(type, config[type]);

@@ -6,6 +6,7 @@ import {
   BehaviorType,
   ModelBehaviors,
   TransformConfig,
+  BodyConfig,
   GesturesConfig,
   IdleConfig,
   LipSyncConfig,
@@ -29,10 +30,11 @@ interface BehaviorEditorProps {
   onSave: () => void;
 }
 
-type TabType = 'transform' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'import-export';
+type TabType = 'transform' | 'body' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'import-export';
 
 const TABS: { id: TabType; label: string }[] = [
   { id: 'transform', label: 'Transform' },
+  { id: 'body', label: 'Body' },
   { id: 'expressions', label: 'Expressions' },
   { id: 'gestures', label: 'Gestures' },
   { id: 'idle', label: 'Idle' },
@@ -59,6 +61,11 @@ export function BehaviorEditor({
   // Memoized handlers to prevent unnecessary re-renders
   const handleTransformChange = useCallback(
     (config: Partial<TransformConfig>) => onBehaviorChange('transform', config),
+    [onBehaviorChange]
+  );
+
+  const handleBodyChange = useCallback(
+    (config: Partial<BodyConfig>) => onBehaviorChange('body', config),
     [onBehaviorChange]
   );
 
@@ -133,6 +140,12 @@ export function BehaviorEditor({
                 <TransformTab
                   config={behaviors.transform}
                   onChange={handleTransformChange}
+                />
+              )}
+              {activeTab === 'body' && (
+                <BodyTab
+                  config={behaviors.body}
+                  onChange={handleBodyChange}
                 />
               )}
               {activeTab === 'expressions' && (
@@ -361,6 +374,170 @@ function TransformTab({
             <button
               key={preset.label}
               onClick={() => onChange({ position: preset.pos })}
+              className="px-2 py-0.5 text-[9px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Body Tab - Default pose and arm/body positions
+function BodyTab({
+  config,
+  onChange,
+}: {
+  config: BodyConfig;
+  onChange: (config: Partial<BodyConfig>) => void;
+}) {
+  // Helper to convert degrees to radians for display
+  const degToRad = (deg: number) => (deg * Math.PI) / 180;
+  const radToDeg = (rad: number) => (rad * 180) / Math.PI;
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <SectionHeader title="Left Arm" />
+        <Slider
+          label="Upper X"
+          value={config.leftUpperArm.x}
+          min={-90}
+          max={90}
+          step={1}
+          onChange={(x) => onChange({ leftUpperArm: { ...config.leftUpperArm, x } })}
+        />
+        <Slider
+          label="Upper Y"
+          value={config.leftUpperArm.y}
+          min={-90}
+          max={90}
+          step={1}
+          onChange={(y) => onChange({ leftUpperArm: { ...config.leftUpperArm, y } })}
+        />
+        <Slider
+          label="Upper Z"
+          value={config.leftUpperArm.z}
+          min={-90}
+          max={90}
+          step={1}
+          onChange={(z) => onChange({ leftUpperArm: { ...config.leftUpperArm, z } })}
+        />
+        <Slider
+          label="Lower X"
+          value={config.leftLowerArm.x}
+          min={-90}
+          max={90}
+          step={1}
+          onChange={(x) => onChange({ leftLowerArm: { ...config.leftLowerArm, x } })}
+        />
+      </div>
+
+      <div>
+        <SectionHeader title="Right Arm" />
+        <Slider
+          label="Upper X"
+          value={config.rightUpperArm.x}
+          min={-90}
+          max={90}
+          step={1}
+          onChange={(x) => onChange({ rightUpperArm: { ...config.rightUpperArm, x } })}
+        />
+        <Slider
+          label="Upper Y"
+          value={config.rightUpperArm.y}
+          min={-90}
+          max={90}
+          step={1}
+          onChange={(y) => onChange({ rightUpperArm: { ...config.rightUpperArm, y } })}
+        />
+        <Slider
+          label="Upper Z"
+          value={config.rightUpperArm.z}
+          min={-90}
+          max={90}
+          step={1}
+          onChange={(z) => onChange({ rightUpperArm: { ...config.rightUpperArm, z } })}
+        />
+        <Slider
+          label="Lower X"
+          value={config.rightLowerArm.x}
+          min={-90}
+          max={90}
+          step={1}
+          onChange={(x) => onChange({ rightLowerArm: { ...config.rightLowerArm, x } })}
+        />
+      </div>
+
+      <div>
+        <SectionHeader title="Spine & Chest" />
+        <Slider
+          label="Spine X"
+          value={config.spine.x}
+          min={-45}
+          max={45}
+          step={1}
+          onChange={(x) => onChange({ spine: { ...config.spine, x } })}
+        />
+        <Slider
+          label="Spine Y"
+          value={config.spine.y}
+          min={-45}
+          max={45}
+          step={1}
+          onChange={(y) => onChange({ spine: { ...config.spine, y } })}
+        />
+        <Slider
+          label="Chest X"
+          value={config.chest.x}
+          min={-30}
+          max={30}
+          step={1}
+          onChange={(x) => onChange({ chest: { ...config.chest, x } })}
+        />
+      </div>
+
+      <div>
+        <SectionHeader title="Eye Tracking" />
+        <Toggle
+          label="Enabled"
+          checked={config.eyeTracking.enabled}
+          onChange={(enabled) => onChange({ eyeTracking: { ...config.eyeTracking, enabled } })}
+        />
+        <Slider
+          label="Intensity"
+          value={config.eyeTracking.intensity}
+          min={0}
+          max={1}
+          onChange={(intensity) => onChange({ eyeTracking: { ...config.eyeTracking, intensity } })}
+        />
+      </div>
+
+      <div>
+        <SectionHeader title="Presets" />
+        <div className="flex gap-1 flex-wrap">
+          {[
+            { label: 'Relaxed', arms: { lz: 30, rz: -30 } },
+            { label: 'T-Pose', arms: { lz: 0, rz: 0 } },
+            { label: 'Arms Down', arms: { lz: 60, rz: -60 } },
+            { label: 'Crossed', arms: { lz: 45, rz: -45, lx: 30, rx: 30 } },
+          ].map((preset) => (
+            <button
+              key={preset.label}
+              onClick={() => onChange({
+                leftUpperArm: { 
+                  x: (preset.arms as any).lx ?? 0, 
+                  y: 0, 
+                  z: preset.arms.lz 
+                },
+                rightUpperArm: { 
+                  x: (preset.arms as any).rx ?? 0, 
+                  y: 0, 
+                  z: preset.arms.rz 
+                },
+              })}
               className="px-2 py-0.5 text-[9px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
             >
               {preset.label}

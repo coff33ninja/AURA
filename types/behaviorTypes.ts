@@ -3,7 +3,7 @@
 /**
  * All behavior configuration types
  */
-export type BehaviorType = 'transform' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions';
+export type BehaviorType = 'transform' | 'expressions' | 'gestures' | 'idle' | 'lipsync' | 'reactions' | 'body';
 
 /**
  * Transform configuration - position, rotation, scale on screen
@@ -16,6 +16,31 @@ export interface TransformConfig {
   cameraHeight: number;
   cameraLookAtHeight: number;
   cameraFov?: number;
+}
+
+/**
+ * Body/Pose configuration - default arm, leg, spine positions
+ */
+export interface BodyConfig {
+  // Arm positions (degrees)
+  leftUpperArm: { x: number; y: number; z: number };
+  rightUpperArm: { x: number; y: number; z: number };
+  leftLowerArm: { x: number; y: number; z: number };
+  rightLowerArm: { x: number; y: number; z: number };
+  // Hand positions
+  leftHand: { x: number; y: number; z: number };
+  rightHand: { x: number; y: number; z: number };
+  // Spine/torso
+  spine: { x: number; y: number; z: number };
+  chest: { x: number; y: number; z: number };
+  // Legs (optional)
+  leftUpperLeg?: { x: number; y: number; z: number };
+  rightUpperLeg?: { x: number; y: number; z: number };
+  // Eye tracking
+  eyeTracking: {
+    enabled: boolean;
+    intensity: number; // 0-1
+  };
 }
 
 /**
@@ -130,6 +155,7 @@ export interface ModelBehaviors {
   modelName: string;
   version: string; // for import/export compatibility
   transform: TransformConfig;
+  body: BodyConfig;
   expressions: ExpressionsConfig;
   gestures: GesturesConfig;
   idle: IdleConfig;
@@ -142,6 +168,7 @@ export interface ModelBehaviors {
  */
 export interface BehaviorConfigs {
   transform: TransformConfig;
+  body: BodyConfig;
   expressions: ExpressionsConfig;
   gestures: GesturesConfig;
   idle: IdleConfig;
@@ -167,6 +194,18 @@ export const DEFAULT_TRANSFORM: TransformConfig = {
   cameraDistance: 2.0,
   cameraHeight: 1.3,
   cameraLookAtHeight: 1.2,
+};
+
+export const DEFAULT_BODY: BodyConfig = {
+  leftUpperArm: { x: 0, y: 0, z: 30 },  // degrees
+  rightUpperArm: { x: 0, y: 0, z: -30 },
+  leftLowerArm: { x: 0, y: 0, z: 0 },
+  rightLowerArm: { x: 0, y: 0, z: 0 },
+  leftHand: { x: 0, y: 0, z: 0 },
+  rightHand: { x: 0, y: 0, z: 0 },
+  spine: { x: 0, y: 0, z: 0 },
+  chest: { x: 0, y: 0, z: 0 },
+  eyeTracking: { enabled: true, intensity: 0.7 },
 };
 
 export const DEFAULT_GESTURES: GesturesConfig = {
@@ -202,6 +241,7 @@ export const DEFAULT_EXPRESSIONS: ExpressionsConfig = {
 export function getDefaultConfig<T extends BehaviorType>(type: T): BehaviorConfigs[T] {
   const defaults: Record<BehaviorType, any> = {
     transform: DEFAULT_TRANSFORM,
+    body: DEFAULT_BODY,
     expressions: DEFAULT_EXPRESSIONS,
     gestures: DEFAULT_GESTURES,
     idle: DEFAULT_IDLE,
@@ -219,6 +259,7 @@ export function createDefaultModelBehaviors(modelName: string): ModelBehaviors {
     modelName,
     version: '1.0.0',
     transform: { ...DEFAULT_TRANSFORM },
+    body: { ...DEFAULT_BODY },
     expressions: { ...DEFAULT_EXPRESSIONS },
     gestures: { ...DEFAULT_GESTURES },
     idle: { ...DEFAULT_IDLE },
@@ -305,4 +346,14 @@ export function isValidExpressionsConfig(config: unknown): config is Expressions
   if (!config || typeof config !== 'object') return false;
   const c = config as Record<string, unknown>;
   return typeof c.mappings === 'object' && c.mappings !== null;
+}
+
+export function isValidBodyConfig(config: unknown): config is BodyConfig {
+  if (!config || typeof config !== 'object') return false;
+  const c = config as Record<string, unknown>;
+  return (
+    typeof c.leftUpperArm === 'object' &&
+    typeof c.rightUpperArm === 'object' &&
+    typeof c.eyeTracking === 'object'
+  );
 }

@@ -639,6 +639,45 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         for (const reaction of behaviors.reactions.reactions) {
           reactionsMapRef.current.set(reaction.name, reaction);
         }
+      } else if (type === 'body' && behaviors.body) {
+        // Apply body config changes in real-time
+        const bodyConfig = behaviors.body;
+        const degToRad = (deg: number) => (deg * Math.PI) / 180;
+        
+        boneTargets.current.leftUpperArm = {
+          x: degToRad(bodyConfig.leftUpperArm.x),
+          y: degToRad(bodyConfig.leftUpperArm.y),
+          z: degToRad(bodyConfig.leftUpperArm.z),
+        };
+        boneTargets.current.rightUpperArm = {
+          x: degToRad(bodyConfig.rightUpperArm.x),
+          y: degToRad(bodyConfig.rightUpperArm.y),
+          z: degToRad(bodyConfig.rightUpperArm.z),
+        };
+        boneTargets.current.leftLowerArm = {
+          x: degToRad(bodyConfig.leftLowerArm.x),
+          y: degToRad(bodyConfig.leftLowerArm.y),
+          z: degToRad(bodyConfig.leftLowerArm.z),
+        };
+        boneTargets.current.rightLowerArm = {
+          x: degToRad(bodyConfig.rightLowerArm.x),
+          y: degToRad(bodyConfig.rightLowerArm.y),
+          z: degToRad(bodyConfig.rightLowerArm.z),
+        };
+        boneTargets.current.spine = {
+          x: degToRad(bodyConfig.spine.x),
+          y: degToRad(bodyConfig.spine.y),
+          z: degToRad(bodyConfig.spine.z),
+        };
+        boneTargets.current.chest = {
+          x: degToRad(bodyConfig.chest.x),
+          y: degToRad(bodyConfig.chest.y),
+          z: degToRad(bodyConfig.chest.z),
+        };
+        
+        // Update eye tracking
+        cameraTrackingRef.current.enabled = bodyConfig.eyeTracking.enabled;
+        cameraTrackingRef.current.intensity = bodyConfig.eyeTracking.intensity;
       }
       
       console.log('[NeuralCore] Behavior updated:', type);
@@ -673,31 +712,67 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         expressionTargets.current = {};
         expressionTargetsActual.current = {};
         
-        // Set default arm positions from config, with pose settings as override
-        const leftArmDeg = poseSettings?.leftArmZ ?? (config.defaultPose.leftUpperArm.z * 180 / Math.PI);
-        const rightArmDeg = poseSettings?.rightArmZ ?? (config.defaultPose.rightUpperArm.z * 180 / Math.PI);
+        // Set default arm positions from behaviors (if loaded) or config, with pose settings as override
+        const bodyConfig = behaviorsRef.current?.body;
+        const leftArmDeg = poseSettings?.leftArmZ ?? (bodyConfig?.leftUpperArm?.z ?? (config.defaultPose.leftUpperArm.z * 180 / Math.PI));
+        const rightArmDeg = poseSettings?.rightArmZ ?? (bodyConfig?.rightUpperArm?.z ?? (config.defaultPose.rightUpperArm.z * 180 / Math.PI));
+        
+        // Convert degrees to radians for bone rotations
+        const degToRad = (deg: number) => (deg * Math.PI) / 180;
+        
         boneTargets.current = {
           leftUpperArm: { 
-            x: config.defaultPose.leftUpperArm.x, 
-            y: config.defaultPose.leftUpperArm.y, 
-            z: (leftArmDeg * Math.PI) / 180 
+            x: degToRad(bodyConfig?.leftUpperArm?.x ?? 0), 
+            y: degToRad(bodyConfig?.leftUpperArm?.y ?? 0), 
+            z: degToRad(leftArmDeg)
           },
           rightUpperArm: { 
-            x: config.defaultPose.rightUpperArm.x, 
-            y: config.defaultPose.rightUpperArm.y, 
-            z: (rightArmDeg * Math.PI) / 180 
+            x: degToRad(bodyConfig?.rightUpperArm?.x ?? 0), 
+            y: degToRad(bodyConfig?.rightUpperArm?.y ?? 0), 
+            z: degToRad(rightArmDeg)
           },
         };
         
-        // Add other default pose bones if specified in config
-        if (config.defaultPose.leftLowerArm) {
+        // Add other default pose bones from body config
+        if (bodyConfig?.leftLowerArm) {
+          boneTargets.current.leftLowerArm = {
+            x: degToRad(bodyConfig.leftLowerArm.x),
+            y: degToRad(bodyConfig.leftLowerArm.y),
+            z: degToRad(bodyConfig.leftLowerArm.z),
+          };
+        } else if (config.defaultPose.leftLowerArm) {
           boneTargets.current.leftLowerArm = config.defaultPose.leftLowerArm;
         }
-        if (config.defaultPose.rightLowerArm) {
+        if (bodyConfig?.rightLowerArm) {
+          boneTargets.current.rightLowerArm = {
+            x: degToRad(bodyConfig.rightLowerArm.x),
+            y: degToRad(bodyConfig.rightLowerArm.y),
+            z: degToRad(bodyConfig.rightLowerArm.z),
+          };
+        } else if (config.defaultPose.rightLowerArm) {
           boneTargets.current.rightLowerArm = config.defaultPose.rightLowerArm;
         }
-        if (config.defaultPose.spine) {
+        if (bodyConfig?.spine) {
+          boneTargets.current.spine = {
+            x: degToRad(bodyConfig.spine.x),
+            y: degToRad(bodyConfig.spine.y),
+            z: degToRad(bodyConfig.spine.z),
+          };
+        } else if (config.defaultPose.spine) {
           boneTargets.current.spine = config.defaultPose.spine;
+        }
+        if (bodyConfig?.chest) {
+          boneTargets.current.chest = {
+            x: degToRad(bodyConfig.chest.x),
+            y: degToRad(bodyConfig.chest.y),
+            z: degToRad(bodyConfig.chest.z),
+          };
+        }
+        
+        // Update eye tracking settings from body config
+        if (bodyConfig?.eyeTracking) {
+          cameraTrackingRef.current.enabled = bodyConfig.eyeTracking.enabled;
+          cameraTrackingRef.current.intensity = bodyConfig.eyeTracking.intensity;
         }
         
         // === Dynamic Height Adjustment ===
