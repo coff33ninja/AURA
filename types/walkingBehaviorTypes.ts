@@ -6,9 +6,9 @@
 export type WalkingStyle = 'casual' | 'march' | 'sneak' | 'run';
 
 /**
- * Walking direction
+ * Walking direction - preset directions or custom angle
  */
-export type WalkingDirection = 'forward' | 'backward' | 'strafeLeft' | 'strafeRight';
+export type WalkingDirection = 'forward' | 'backward' | 'strafeLeft' | 'strafeRight' | 'custom';
 
 /**
  * Leg bone configuration
@@ -37,6 +37,14 @@ export interface WalkingBehaviorConfig {
   speed: number;             // 0-2 (0=stopped, 1=normal, 2=fast)
   direction: WalkingDirection;
   
+  // Custom angle for omnidirectional walking (0-360 degrees)
+  // 0 = toward camera, 90 = right, 180 = away from camera, 270 = left
+  angle: number;
+  
+  // Depth movement (Z-axis toward/away from camera)
+  // Positive = toward camera (model grows), Negative = away (model shrinks)
+  depthSpeed: number;        // -1 to 1, multiplier for depth movement
+  
   // Vertical bob (from existing WalkingConfig)
   bobIntensity: number;      // 0-0.1
   bobFrequency: number;      // 0.5-4
@@ -58,6 +66,8 @@ export const DEFAULT_WALKING_BEHAVIOR: WalkingBehaviorConfig = {
   enabled: false,
   speed: 0,
   direction: 'forward',
+  angle: 0,
+  depthSpeed: 0,
   bobIntensity: 0.02,
   bobFrequency: 2.0,
   legs: {
@@ -102,6 +112,33 @@ export const WALKING_PRESETS: Record<WalkingStyle, Partial<WalkingBehaviorConfig
     armSwing: { enabled: true, intensity: 0.9, syncWithLegs: true },
   },
 };
+
+/**
+ * Convert direction preset to angle in degrees
+ */
+export function directionToAngle(direction: WalkingDirection, customAngle: number = 0): number {
+  switch (direction) {
+    case 'forward': return 0;      // Toward camera
+    case 'backward': return 180;   // Away from camera
+    case 'strafeLeft': return 270; // Left
+    case 'strafeRight': return 90; // Right
+    case 'custom': return customAngle;
+    default: return 0;
+  }
+}
+
+/**
+ * Calculate movement vector from angle
+ * Returns normalized X and Z components
+ * Angle 0 = toward camera (-Z), 90 = right (+X), 180 = away (+Z), 270 = left (-X)
+ */
+export function angleToMovementVector(angleDegrees: number): { x: number; z: number } {
+  const angleRad = (angleDegrees * Math.PI) / 180;
+  return {
+    x: Math.sin(angleRad),   // Right is positive X
+    z: -Math.cos(angleRad),  // Toward camera is negative Z
+  };
+}
 
 /**
  * Validate walking behavior config
@@ -165,6 +202,7 @@ export function isValidWalkingDirection(direction: unknown): direction is Walkin
     direction === 'forward' ||
     direction === 'backward' ||
     direction === 'strafeLeft' ||
-    direction === 'strafeRight'
+    direction === 'strafeRight' ||
+    direction === 'custom'
   );
 }

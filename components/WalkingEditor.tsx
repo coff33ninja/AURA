@@ -115,6 +115,14 @@ export function WalkingEditor({
     onChange({ direction });
   }, [onChange]);
 
+  const handleAngleChange = useCallback((angle: number) => {
+    onChange({ angle, direction: 'custom' });
+  }, [onChange]);
+
+  const handleDepthSpeedChange = useCallback((depthSpeed: number) => {
+    onChange({ depthSpeed });
+  }, [onChange]);
+
   const handleStyleChange = useCallback((style: WalkingStyle) => {
     const newConfig = applyWalkingStyle(config, style);
     onChange(newConfig);
@@ -156,7 +164,13 @@ export function WalkingEditor({
     }
   }, [isWalking, onStartWalking, onStopWalking]);
 
-  const directions: WalkingDirection[] = ['forward', 'backward', 'strafeLeft', 'strafeRight'];
+  const directions: { value: WalkingDirection; label: string }[] = [
+    { value: 'forward', label: '↑ Fwd' },
+    { value: 'backward', label: '↓ Back' },
+    { value: 'strafeLeft', label: '← Left' },
+    { value: 'strafeRight', label: '→ Right' },
+    { value: 'custom', label: '⟳ Custom' },
+  ];
   const styles: WalkingStyle[] = ['casual', 'march', 'sneak', 'run'];
 
   return (
@@ -209,21 +223,47 @@ export function WalkingEditor({
       {/* Direction */}
       <div>
         <SectionHeader title="Direction" />
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1 flex-wrap mb-2">
           {directions.map((dir) => (
             <button
-              key={dir}
-              onClick={() => handleDirectionChange(dir)}
+              key={dir.value}
+              onClick={() => handleDirectionChange(dir.value)}
               className={`px-2 py-0.5 text-[9px] rounded transition-colors ${
-                config.direction === dir
+                config.direction === dir.value
                   ? 'bg-cyan-600 text-white'
                   : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
               }`}
             >
-              {dir === 'strafeLeft' ? '← Strafe' : dir === 'strafeRight' ? 'Strafe →' : dir.charAt(0).toUpperCase() + dir.slice(1)}
+              {dir.label}
             </button>
           ))}
         </div>
+        {/* Custom angle slider - only show when custom direction selected */}
+        {config.direction === 'custom' && (
+          <Slider
+            label="Angle"
+            value={config.angle || 0}
+            min={0}
+            max={360}
+            step={5}
+            onChange={handleAngleChange}
+          />
+        )}
+        <p className="text-[8px] text-gray-500 mb-1">0°=toward camera, 90°=right, 180°=away, 270°=left</p>
+      </div>
+
+      {/* Depth Movement */}
+      <div>
+        <SectionHeader title="Depth (Toward/Away)" />
+        <Slider
+          label="Depth Speed"
+          value={config.depthSpeed || 0}
+          min={-1}
+          max={1}
+          step={0.1}
+          onChange={handleDepthSpeedChange}
+        />
+        <p className="text-[8px] text-gray-500">+ = toward camera (grow), - = away (shrink)</p>
       </div>
 
       {/* Vertical Bob */}

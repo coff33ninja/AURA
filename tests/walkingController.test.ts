@@ -21,6 +21,8 @@ import {
   isValidWalkingBehaviorConfig,
   isValidLegConfig,
   isValidArmSwingConfig,
+  directionToAngle,
+  angleToMovementVector,
   type WalkingBehaviorConfig,
   type WalkingStyle,
   type WalkingDirection,
@@ -28,7 +30,7 @@ import {
 
 // Arbitrary generators for walking types
 const walkingStyleArb = fc.constantFrom<WalkingStyle>('casual', 'march', 'sneak', 'run');
-const walkingDirectionArb = fc.constantFrom<WalkingDirection>('forward', 'backward', 'strafeLeft', 'strafeRight');
+const walkingDirectionArb = fc.constantFrom<WalkingDirection>('forward', 'backward', 'strafeLeft', 'strafeRight', 'custom');
 
 const legConfigArb = fc.record({
   strideLength: fc.float({ min: Math.fround(0), max: Math.fround(1), noNaN: true }),
@@ -46,6 +48,8 @@ const walkingBehaviorConfigArb = fc.record({
   enabled: fc.boolean(),
   speed: fc.float({ min: Math.fround(0), max: Math.fround(2), noNaN: true }),
   direction: walkingDirectionArb,
+  angle: fc.float({ min: Math.fround(0), max: Math.fround(360), noNaN: true }),
+  depthSpeed: fc.float({ min: Math.fround(-1), max: Math.fround(1), noNaN: true }),
   bobIntensity: fc.float({ min: Math.fround(0), max: Math.fround(0.1), noNaN: true }),
   bobFrequency: fc.float({ min: Math.fround(0.5), max: Math.fround(4), noNaN: true }),
   legs: legConfigArb,
@@ -424,6 +428,69 @@ describe('Walking Controller', () => {
         leftUpperArm: { x: NaN, y: 0, z: 0 },
         rightUpperArm: { x: 0, y: 0, z: 0 },
       })).toBe(false);
+    });
+  });
+
+  describe('directionToAngle', () => {
+    it('converts preset directions to correct angles', () => {
+      expect(directionToAngle('forward', 0)).toBe(0);
+      expect(directionToAngle('backward', 0)).toBe(180);
+      expect(directionToAngle('strafeLeft', 0)).toBe(270);
+      expect(directionToAngle('strafeRight', 0)).toBe(90);
+    });
+
+    it('returns custom angle for custom direction', () => {
+      expect(directionToAngle('custom', 45)).toBe(45);
+      expect(directionToAngle('custom', 135)).toBe(135);
+      expect(directionToAngle('custom', 225)).toBe(225);
+    });
+  });
+
+  describe('angleToMovementVector', () => {
+    it('0 degrees moves toward camera (negative Z)', () => {
+      const vec = angleToMovementVector(0);
+      expect(vec.x).toBeCloseTo(0, 5);
+      expect(vec.z).toBeCloseTo(-1, 5);
+    });
+
+    it('90 degrees moves right (positive X)', () => {
+      const vec = angleToMovementVector(90);
+      expect(vec.x).toBeCloseTo(1, 5);
+      expect(vec.z).toBeCloseTo(0, 5);
+    });
+
+    it('180 degrees moves away from camera (positive Z)', () => {
+      const vec = angleToMovementVector(180);
+      expect(vec.x).toBeCloseTo(0, 5);
+      expect(vec.z).toBeCloseTo(1, 5);
+    });
+
+    it('270 degrees moves left (negative X)', () => {
+      const vec = angleToMovementVector(270);
+      expect(vec.x).toBeCloseTo(-1, 5);
+      expect(vec.z).toBeCloseTo(0, 5);
+    });
+
+    it('45 degrees moves diagonally right-forward', () => {
+      const vec = angleToMovementVector(45);
+      expect(vec.x).toBeGreaterThan(0);
+      expect(vec.z).toBeLessThan(0);
+      // Should be roughly equal magnitude
+      expect(Math.abs(vec.x)).toBeCloseTo(Math.abs(vec.z), 1);
+    });
+
+    it('produces normalized vectors for any angle', () => {
+      fc.assert(
+        fc.property(
+          fc.float({ min: Math.fround(0), max: Math.fround(360), noNaN: true }),
+          (angle) => {
+            const vec = angleToMovementVector(angle);
+            const magnitude = Math.sqrt(vec.x * vec.x + vec.z * vec.z);
+            expect(magnitude).toBeCloseTo(1, 5);
+          }
+        ),
+        { numRuns: 50 }
+      );
     });
   });
 });

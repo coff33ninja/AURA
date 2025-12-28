@@ -26,7 +26,7 @@ import { calculateBreathingState, getStateMultiplier } from '../utils/breathingA
 import { calculateWalkingBob, smoothTransitionBob, DEFAULT_WALKING_CONFIG } from '../utils/walkingAnimator';
 import { calculateLegPose, calculateArmSwingPose, calculateWalkPhase } from '../utils/walkingController';
 import type { WalkingBehaviorConfig } from '../types/walkingBehaviorTypes';
-import { DEFAULT_WALKING_BEHAVIOR } from '../types/walkingBehaviorTypes';
+import { DEFAULT_WALKING_BEHAVIOR, directionToAngle, angleToMovementVector } from '../types/walkingBehaviorTypes';
 import type { BreathingConfig } from '../types/enhancementTypes';
 
 export interface PoseSettings {
@@ -700,16 +700,7 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     if (config.speed !== undefined) {
       walkStateRef.current.speed = config.speed;
     }
-    if (config.direction !== undefined) {
-      // Map direction string to numeric value
-      const dirMap: Record<string, number> = {
-        forward: 0,
-        backward: 1,
-        strafeLeft: 0.25,
-        strafeRight: 0.75,
-      };
-      walkStateRef.current.direction = dirMap[config.direction] ?? 0;
-    }
+    // Direction is now handled directly from walkingBehaviorRef in the animation loop
   };
 
   // Get current walking behavior configuration
@@ -1249,15 +1240,28 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
             
             // 0.5. Handle walking/movement in space
             if (walkStateRef.current.isWalking) {
-              walkStateRef.current.position.z += Math.cos(walkStateRef.current.direction * Math.PI) * walkStateRef.current.speed * 0.5 * delta;
-              walkStateRef.current.position.x += Math.sin(walkStateRef.current.direction * Math.PI) * walkStateRef.current.speed * 0.5 * delta;
+              // Get walking behavior config
+              const walkConfig = walkingBehaviorRef.current;
+              const moveSpeed = walkStateRef.current.speed * 0.5 * delta;
               
-              // Clamp to screen bounds (-2 to 2)
+              // Calculate movement angle (convert direction preset to angle, or use custom angle)
+              const moveAngle = directionToAngle(walkConfig.direction, walkConfig.angle);
+              const moveVector = angleToMovementVector(moveAngle);
+              
+              // Apply horizontal movement (X and Z based on angle)
+              walkStateRef.current.position.x += moveVector.x * moveSpeed;
+              walkStateRef.current.position.z += moveVector.z * moveSpeed;
+              
+              // Apply depth movement (additional Z movement for depth control)
+              // depthSpeed: positive = toward camera (smaller Z), negative = away (larger Z)
+              const depthMove = (walkConfig.depthSpeed || 0) * moveSpeed;
+              walkStateRef.current.position.z -= depthMove;
+              
+              // Clamp to screen bounds
+              // X: -2 to 2 (left/right)
+              // Z: -1.5 to 1.5 (depth - closer to camera is negative, further is positive)
               walkStateRef.current.position.x = Math.max(-2, Math.min(2, walkStateRef.current.position.x));
               walkStateRef.current.position.z = Math.max(-1.5, Math.min(1.5, walkStateRef.current.position.z));
-              
-              // Get walking behavior config for bob and animation
-              const walkConfig = walkingBehaviorRef.current;
               
               // Calculate walking bob using behavior config
               const walkBobConfig = {
