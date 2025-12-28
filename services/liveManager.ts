@@ -38,7 +38,7 @@ export class LiveManager {
     private visualizerActive = false;
 
     // Configurable runtime options
-    private modelName: string = 'gemini-2.5-flash-native-audio-preview-09-2025';
+    private modelName: string = 'gemini-2.5-flash-native-audio-preview-12-2025';
     private voiceName: string = 'Kore';
     private personalityInstruction: string | null = null;
     private availableExpressions: string[] = []; // dynamically set by app when VRM loads
@@ -520,6 +520,8 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
     }
 
     public disconnect() {
+        console.log('[LiveManager] disconnect() called');
+        console.trace('[LiveManager] disconnect stack trace');
         this.visualizerActive = false;
         
         if (this.workletNode) {
