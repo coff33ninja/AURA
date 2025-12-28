@@ -362,13 +362,29 @@ Fires: Coordinated expression + posture + gesture + gaze + idle + mode
    
    You can add multiple keys separated by commas for automatic rotation.
 
-3. **Run locally:**
+3. **Set up VRM model configs:**
+   ```bash
+   npm run setup-models
+   ```
+   This runs two scripts:
+   - `extract-all` - Extracts expression data from VRM files
+   - `generate-configs` - Creates behavior config files for all models
+
+   **Individual scripts:**
+   ```bash
+   npm run extract-all        # Extract VRM expressions only
+   npm run generate-configs   # Generate behavior configs only
+   npm run generate-configs -- --force  # Overwrite existing configs
+   npm run generate-configs -- --model=Furina  # Single model only
+   ```
+
+4. **Run locally:**
    ```bash
    npm run dev
    ```
    Opens at `https://localhost:3000` (HTTPS required for microphone access)
 
-4. **Build for production:**
+5. **Build for production:**
    ```bash
    npm run build
    ```

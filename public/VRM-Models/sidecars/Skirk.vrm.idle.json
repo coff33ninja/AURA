@@ -1,0 +1,57 @@
+{
+  "breathing": {
+    "enabled": true,
+    "speed": 0.8,
+    "intensity": 0.02
+  },
+  "blinking": {
+    "enabled": true,
+    "interval": 4,
+    "duration": 0.15
+  },
+  "sway": {
+    "enabled": true,
+    "amount": 0.1,
+    "speed": 0.6
+  },
+  "headMovement": {
+    "enabled": true,
+    "amount": 0.1
+  },
+  "preset": "calm",
+  "stateOverrides": {
+    "listening": {
+      "headMovement": {
+        "enabled": true,
+        "amount": 0.15
+      },
+      "sway": {
+        "enabled": true,
+        "amount": 0.05,
+        "speed": 0.4
+      }
+    },
+    "thinking": {
+      "sway": {
+        "enabled": true,
+        "amount": 0.05,
+        "speed": 0.3
+      },
+      "headMovement": {
+        "enabled": true,
+        "amount": 0.05
+      }
+    },
+    "talking": {
+      "headMovement": {
+        "enabled": true,
+        "amount": 0.2
+      },
+      "sway": {
+        "enabled": true,
+        "amount": 0.15,
+        "speed": 0.8
+      }
+    }
+  }
+}

@@ -1,0 +1,440 @@
+{
+  "gestures": [
+    {
+      "name": "thumbs_up",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rightHand": {
+          "x": 0,
+          "y": 0,
+          "z": 1.047
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": -0.524
+        }
+      }
+    },
+    {
+      "name": "thumbs_down",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rightHand": {
+          "x": 0,
+          "y": 0,
+          "z": -1.047
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": -0.524
+        }
+      }
+    },
+    {
+      "name": "wave",
+      "enabled": true,
+      "duration": 2,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0,
+          "y": 0,
+          "z": -0.785
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": -1.571
+        }
+      }
+    },
+    {
+      "name": "point",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": -0.524,
+          "y": 0.785,
+          "z": 0
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": -1.047
+        }
+      }
+    },
+    {
+      "name": "point_left",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "leftUpperArm": {
+          "x": -0.524,
+          "y": -0.785,
+          "z": 0
+        },
+        "leftLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": 1.047
+        }
+      }
+    },
+    {
+      "name": "peace_sign",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightHand": {
+          "x": 0,
+          "y": 0,
+          "z": 0.524
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": -1.571
+        }
+      }
+    },
+    {
+      "name": "ok_sign",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightHand": {
+          "x": 0,
+          "y": 0.785,
+          "z": 0
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": -1.047
+        }
+      }
+    },
+    {
+      "name": "fist",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightHand": {
+          "x": 1.571,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "open_hand",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightHand": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "prayer",
+      "enabled": true,
+      "duration": 2,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightHand": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "leftHand": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rightLowerArm": {
+          "x": 0.785,
+          "y": 0,
+          "z": 0
+        },
+        "leftLowerArm": {
+          "x": 0.785,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "applause",
+      "enabled": true,
+      "duration": 2.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightLowerArm": {
+          "x": 1.047,
+          "y": 0,
+          "z": 0
+        },
+        "leftLowerArm": {
+          "x": 1.047,
+          "y": 0,
+          "z": 0
+        },
+        "rightHand": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "leftHand": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "shrug",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0,
+          "y": 0,
+          "z": -0.524
+        },
+        "leftUpperArm": {
+          "x": 0,
+          "y": 0,
+          "z": 0.524
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": -0.785
+        },
+        "leftLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": 0.785
+        }
+      }
+    },
+    {
+      "name": "hands_up",
+      "enabled": true,
+      "duration": 2,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": -1.571,
+          "y": 0,
+          "z": 0
+        },
+        "leftUpperArm": {
+          "x": -1.571,
+          "y": 0,
+          "z": 0
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "leftLowerArm": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "hands_together",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightHand": {
+          "x": 0,
+          "y": 0.524,
+          "z": -0.785
+        },
+        "leftHand": {
+          "x": 0,
+          "y": -0.524,
+          "z": 0.785
+        },
+        "rightLowerArm": {
+          "x": 0.524,
+          "y": 0,
+          "z": 0
+        },
+        "leftLowerArm": {
+          "x": 0.524,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "dismissive_wave",
+      "enabled": true,
+      "duration": 1.5,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0,
+          "y": 0,
+          "z": -0.628
+        },
+        "rightLowerArm": {
+          "x": 0,
+          "y": 0.785,
+          "z": -0.785
+        },
+        "rightHand": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "chin_rest",
+      "enabled": true,
+      "duration": 2,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0.524,
+          "y": 0,
+          "z": 0
+        },
+        "rightLowerArm": {
+          "x": 1.571,
+          "y": 0,
+          "z": 0
+        },
+        "rightHand": {
+          "x": -0.524,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "arms_crossed",
+      "enabled": true,
+      "duration": 2,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0.785,
+          "y": 0,
+          "z": 0
+        },
+        "leftUpperArm": {
+          "x": 0.785,
+          "y": 0,
+          "z": 0
+        },
+        "rightLowerArm": {
+          "x": 1.571,
+          "y": 0,
+          "z": 0.524
+        },
+        "leftLowerArm": {
+          "x": 1.571,
+          "y": 0,
+          "z": -0.524
+        }
+      }
+    },
+    {
+      "name": "hand_on_hip",
+      "enabled": true,
+      "duration": 2,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0,
+          "y": 0,
+          "z": -0.524
+        },
+        "rightLowerArm": {
+          "x": 1.047,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "name": "thinking",
+      "enabled": true,
+      "duration": 2,
+      "intensity": 1,
+      "transitionSpeed": 5,
+      "bones": {
+        "rightUpperArm": {
+          "x": 0.524,
+          "y": 0,
+          "z": 0
+        },
+        "rightLowerArm": {
+          "x": 1.257,
+          "y": 0,
+          "z": 0
+        },
+        "rightHand": {
+          "x": -0.262,
+          "y": 0,
+          "z": 0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "sensitivity": 4,
+  "smoothing": 0.3,
+  "visemeWeights": {
+    "a": 0.8,
+    "i": 0.3,
+    "u": 0.25,
+    "e": 0.3,
+    "o": 0.6
+  },
+  "preset": "normal"
+}

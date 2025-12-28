@@ -7,6 +7,8 @@
     "dev": "vite",
     "extract-vrm": "node tools/patch-vrm-expressions.mjs",
     "extract-all": "node tools/extract-all.mjs",
+    "generate-configs": "node tools/generate-vrm-configs.mjs",
+    "setup-models": "npm run extract-all && npm run generate-configs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
