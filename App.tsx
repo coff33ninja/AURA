@@ -448,7 +448,7 @@ const App: React.FC = () => {
       <div className="absolute inset-0 z-10 pointer-events-none">
         {/* Right side: Behavior Editor Panel */}
         {behaviorEditorOpen && currentBehaviors && (
-          <div className="absolute right-4 top-16 bottom-4 w-80 pointer-events-auto overflow-hidden">
+          <div className="absolute right-4 top-16 w-72 max-h-[70vh] pointer-events-auto overflow-hidden">
             <BehaviorEditor
               isOpen={behaviorEditorOpen}
               modelName={selectedVrm.replace('.vrm', '')}
