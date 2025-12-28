@@ -44,6 +44,13 @@ export class LiveManager {
     private availableExpressions: string[] = []; // dynamically set by app when VRM loads
     private isReconnecting: boolean = false;
     
+    // Reconnection state
+    private reconnectAttempts: number = 0;
+    private maxReconnectAttempts: number = 5;
+    private reconnectTimeoutId: NodeJS.Timeout | null = null;
+    private shouldAutoReconnect: boolean = false;
+    private lastMicStream: MediaStream | null = null;
+    
     // VrmCommand types emitted to the app
     public onVrmCommand: (command: VrmCommand) => void = () => {};
     public onVolumeChange: (vol: number) => void = () => {};
@@ -93,11 +100,66 @@ export class LiveManager {
         if (this.isReconnecting) return;
         this.isReconnecting = true;
         try {
-            this.disconnect();
+            this.cleanupWithoutReconnect();
             await this.connect();
         } finally {
             this.isReconnecting = false;
         }
+    }
+
+    private attemptReconnect() {
+        this.reconnectAttempts++;
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000); // Exponential backoff, max 30s
+        
+        console.log(`[LiveManager] Attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+        this.onStatusChange(`Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+        
+        this.reconnectTimeoutId = setTimeout(async () => {
+            try {
+                await this.reconnect();
+                this.reconnectAttempts = 0; // Reset on successful reconnect
+            } catch (e) {
+                console.error('[LiveManager] Reconnect failed:', e);
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.attemptReconnect();
+                } else {
+                    this.onStatusChange("Connection Failed");
+                    this.onClose();
+                }
+            }
+        }, delay);
+    }
+
+    private cleanupWithoutReconnect() {
+        // Clean up resources without triggering reconnect
+        this.visualizerActive = false;
+        
+        if (this.workletNode) {
+            this.workletNode.disconnect();
+            this.workletNode.port.close();
+            this.workletNode = null;
+        }
+        if (this.processor) {
+            this.processor.disconnect();
+            this.processor.onaudioprocess = null;
+            this.processor = null;
+        }
+        if (this.inputSource) {
+            this.inputSource.disconnect();
+            this.inputSource = null;
+        }
+        if (this.inputAudioContext && this.inputAudioContext.state !== 'closed') {
+            this.inputAudioContext.close();
+        }
+        if (this.outputAudioContext && this.outputAudioContext.state !== 'closed') {
+            this.outputAudioContext.close();
+        }
+        
+        this.inputAudioContext = null;
+        this.outputAudioContext = null;
+        this.sessionPromise = null;
+        this.client = null;
+        this.nextStartTime = 0;
     }
 
     private getNextApiKey(): string {
@@ -110,6 +172,16 @@ export class LiveManager {
         console.log('[LiveManager] Starting connection...');
         console.log(`[LiveManager] Model: ${this.modelName}, Voice: ${this.voiceName}`);
         this.onStatusChange("Initializing Audio...");
+        
+        // Enable auto-reconnect for this session
+        this.shouldAutoReconnect = true;
+        this.reconnectAttempts = 0;
+        
+        // Clear any pending reconnect timeout
+        if (this.reconnectTimeoutId) {
+            clearTimeout(this.reconnectTimeoutId);
+            this.reconnectTimeoutId = null;
+        }
         
         // 1. Setup Audio Contexts
         this.inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -310,8 +382,19 @@ export class LiveManager {
                                 wasClean: event?.wasClean,
                                 event
                             });
-                            this.onStatusChange("Disconnected");
-                            this.disconnect();
+                            
+                            // Check if we should attempt reconnection
+                            const isRecoverable = event?.code !== 1008 && // Not a leaked key error
+                                                  event?.code !== 1003 && // Not unsupported data
+                                                  this.shouldAutoReconnect &&
+                                                  this.reconnectAttempts < this.maxReconnectAttempts;
+                            
+                            if (isRecoverable) {
+                                this.attemptReconnect();
+                            } else {
+                                this.onStatusChange("Disconnected");
+                                this.cleanupWithoutReconnect();
+                            }
                         },
                         onerror: (err: any) => {
                             console.error("[LiveManager] ❌ Live API Error:", err);
@@ -513,34 +596,18 @@ export class LiveManager {
     public disconnect() {
         console.log('[LiveManager] disconnect() called');
         console.trace('[LiveManager] disconnect stack trace');
-        this.visualizerActive = false;
         
-        if (this.workletNode) {
-            this.workletNode.disconnect();
-            this.workletNode.port.close();
-            this.workletNode = null;
-        }
-        if (this.processor) {
-            this.processor.disconnect();
-            this.processor.onaudioprocess = null;
-            this.processor = null;
-        }
-        if (this.inputSource) {
-            this.inputSource.disconnect();
-            this.inputSource = null;
-        }
-        if (this.inputAudioContext && this.inputAudioContext.state !== 'closed') {
-            this.inputAudioContext.close();
-        }
-        if (this.outputAudioContext && this.outputAudioContext.state !== 'closed') {
-            this.outputAudioContext.close();
+        // Disable auto-reconnect on user-initiated disconnect
+        this.shouldAutoReconnect = false;
+        this.reconnectAttempts = 0;
+        
+        // Clear any pending reconnect timeout
+        if (this.reconnectTimeoutId) {
+            clearTimeout(this.reconnectTimeoutId);
+            this.reconnectTimeoutId = null;
         }
         
-        this.inputAudioContext = null;
-        this.outputAudioContext = null;
-        this.sessionPromise = null;
-        this.client = null;
-        this.nextStartTime = 0;
+        this.cleanupWithoutReconnect();
         this.onClose();
     }
 }
