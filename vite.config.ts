@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
       define: {
         'process.env.GEMINI_API_KEYS': JSON.stringify(env.GEMINI_API_KEYS)
       },
+      build: {
+        chunkSizeWarningLimit: 1500,
+      },
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
