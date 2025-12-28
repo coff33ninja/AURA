@@ -46,6 +46,7 @@ const App: React.FC = () => {
   const [selectedMode, setSelectedMode] = useState<'ACTIVE' | 'PASSIVE'>(() => 
     (localStorage.getItem(STORAGE_KEYS.selectedMode) as 'ACTIVE' | 'PASSIVE') || 'ACTIVE'
   );
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const liveVolumeRef = useRef<number>(0);
   const liveMicVolumeRef = useRef<number>(0);
@@ -140,11 +141,38 @@ const App: React.FC = () => {
       if (e.code === 'Escape') {
         setMenuOpen(false);
       }
+      
+      // F key for fullscreen toggle
+      if (e.code === 'KeyF' && !e.repeat) {
+        e.preventDefault();
+        toggleFullscreen();
+      }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [connectionState]);
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (e) {
+      console.error('Fullscreen error:', e);
+    }
+  };
 
   const handleConnect = async () => {
     if (!liveManagerRef.current) return;
@@ -195,8 +223,28 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Top-right: Settings button */}
-        <div className="absolute top-4 right-4 pointer-events-auto">
+        {/* Top-right: Settings and Fullscreen buttons */}
+        <div className="absolute top-4 right-4 pointer-events-auto flex gap-2">
+          {/* Fullscreen toggle */}
+          <button 
+            type="button"
+            onClick={toggleFullscreen}
+            className="hud-panel w-9 h-9 flex items-center justify-center hover:bg-white/5 transition-colors"
+            title="Toggle Fullscreen (F)"
+            aria-label="Toggle Fullscreen"
+          >
+            {isFullscreen ? (
+              <svg className="w-4 h-4 text-cyan-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-cyan-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+              </svg>
+            )}
+          </button>
+          
+          {/* Settings button */}
           <button 
             type="button"
             onClick={() => setMenuOpen(!menuOpen)} 

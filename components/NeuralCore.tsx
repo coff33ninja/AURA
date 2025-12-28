@@ -25,6 +25,8 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
   
   // State for loading
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Expression / bone targets for smooth transitions
   const expressionTargets = useRef<Record<string, number>>({});
@@ -641,17 +643,22 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
     // If there is already a VRM loaded from a previous mount, remove it before loading new one
     if (vrmRef.current && sceneRef.current) {
       try {
+        // Properly dispose of the old VRM to free memory
+        VRMUtils.deepDispose(vrmRef.current.scene);
         sceneRef.current.remove(vrmRef.current.scene);
       } catch (e) {
         // ignore
       }
       vrmRef.current = null;
       setIsLoading(true);
+      setLoadProgress(0);
+      setLoadError(null);
     }
     
     loader.load(
       vrmUrl,
       (gltf) => {
+        setLoadError(null);
         const vrm = gltf.userData.vrm as VRM;
         // Un-rotate the VRM if needed (VRM 0.0 vs 1.0 quirks, usually VRMLoaderPlugin handles it)
         VRMUtils.rotateVRM0(vrm);
@@ -740,11 +747,16 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         }
 
         console.log("VRM Loaded");
+        setLoadProgress(100);
         setIsLoading(false);
       },
-      (progress) => console.log('Loading VRM...', 100.0 * (progress.loaded / progress.total), '%'),
+      (progress) => {
+        const pct = progress.total > 0 ? (progress.loaded / progress.total) * 100 : 0;
+        setLoadProgress(Math.round(pct));
+      },
       (error) => {
         console.error('VRM Load Error:', error);
+        setLoadError(`Failed to load model: ${vrmModel}`);
         setIsLoading(false);
         // Notify parent that this model has no valid expressions
         onVrmExpressionsLoaded(['joy', 'angry', 'sorrow', 'fun', 'blink', 'a', 'i', 'u', 'e', 'o']);
@@ -1131,9 +1143,22 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
     <div className="relative w-full h-full">
         <div ref={mountRef} className="w-full h-full" />
         {isLoading && (
+            <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center justify-center pointer-events-none gap-2">
+                <div className="text-cyan-400 font-mono text-sm">
+                    LOADING AVATAR... {loadProgress}%
+                </div>
+                <div className="w-48 h-1 bg-cyan-900/50 rounded-full overflow-hidden">
+                    <div 
+                        className="h-full bg-cyan-400 transition-all duration-150"
+                        style={{ width: `${loadProgress}%` }}
+                    />
+                </div>
+            </div>
+        )}
+        {loadError && !isLoading && (
             <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center pointer-events-none">
-                <div className="text-cyan-400 font-mono animate-pulse">
-                    LOADING AVATAR...
+                <div className="text-red-400 font-mono text-sm">
+                    ⚠ {loadError}
                 </div>
             </div>
         )}
