@@ -1,0 +1,12 @@
+{
+  "mappings": {
+    "happy": "joy",
+    "sad": "sorrow",
+    "angry": "angry",
+    "surprised": "surprised",
+    "relaxed": "relaxed",
+    "neutral": "neutral"
+  },
+  "intensityOverrides": {},
+  "combos": []
+}
