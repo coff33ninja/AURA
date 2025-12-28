@@ -40,6 +40,7 @@ export class LiveManager {
 
     // Configurable runtime options
     private modelName: string = 'gemini-2.5-flash-native-audio-preview-12-2025';
+    private textModelName: string = 'gemini-2.5-flash'; // For text-only mode
     private voiceName: string = 'Kore';
     private personalityInstruction: string | null = null;
     private availableExpressions: string[] = []; // dynamically set by app when VRM loads
@@ -199,7 +200,8 @@ export class LiveManager {
 
     async connect() {
         console.log('[LiveManager] Starting connection...');
-        console.log(`[LiveManager] Model: ${this.modelName}, Voice: ${this.voiceName}, TextOnly: ${this.textOnlyMode}`);
+        const activeModel = this.textOnlyMode ? this.textModelName : this.modelName;
+        console.log(`[LiveManager] Model: ${activeModel}, Voice: ${this.voiceName}, TextOnly: ${this.textOnlyMode}`);
         this.onStatusChange(this.textOnlyMode ? "Connecting..." : "Initializing Audio...");
         
         // Enable auto-reconnect for this session
@@ -277,11 +279,15 @@ export class LiveManager {
                     systemInstruction += `\n\nYou have memory of past conversations with this user. Use this context to provide more personalized responses, but don't explicitly mention "remembering" unless relevant.\n\n${conversationHistory}`;
                 }
                 
+                // Select model based on mode
+                const activeModel = this.textOnlyMode ? this.textModelName : this.modelName;
+                
                 console.log('[LiveManager] Config:', {
-                    model: this.modelName,
+                    model: activeModel,
                     voice: this.voiceName,
                     systemInstructionLength: systemInstruction.length,
-                    hasConversationHistory: !!conversationHistory
+                    hasConversationHistory: !!conversationHistory,
+                    textOnlyMode: this.textOnlyMode
                 });
                 
                 // Configure response modalities based on mode
@@ -290,7 +296,7 @@ export class LiveManager {
                     : [Modality.AUDIO];
                 
                 this.sessionPromise = this.client.live.connect({
-                    model: this.modelName,
+                    model: activeModel,
                     config: {
                         responseModalities: responseModalities,
                         systemInstruction: systemInstruction,
