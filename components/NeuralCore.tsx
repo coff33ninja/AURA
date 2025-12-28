@@ -10,6 +10,7 @@ import {
 } from '../services/behaviorManager';
 import { getGlobalVrmModelManager } from '../services/vrmModelManager';
 import { calculateLodLevel, applyLodSettings, shouldUpdateLod, DEFAULT_LOD_CONFIG, type LodLevel } from '../utils/lodManager';
+import { detectDeviceCapabilities, getOptimalParticleCount } from '../utils/deviceDetector';
 import type { 
   ModelBehaviors,
   GestureDefinition, 
@@ -763,10 +764,14 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     
 
 
-    // Particles (Data stream)
-    const particleGeo = new THREE.BufferGeometry();
-    const particleCount = 150;
+    // Particles (Data stream) - optimized for device capabilities
+    const deviceCaps = detectDeviceCapabilities();
+    const baseParticleCount = 150;
+    const particleCount = getOptimalParticleCount(baseParticleCount, deviceCaps);
     baseParticleCountRef.current = particleCount;
+    console.log(`[NeuralCore] Device: ${deviceCaps.isMobile ? 'Mobile' : 'Desktop'}, Particles: ${particleCount}/${baseParticleCount}`);
+    
+    const particleGeo = new THREE.BufferGeometry();
     const posArray = new Float32Array(particleCount * 3);
     for(let i=0; i<particleCount * 3; i++) {
         posArray[i] = (Math.random() - 0.5) * 3;
