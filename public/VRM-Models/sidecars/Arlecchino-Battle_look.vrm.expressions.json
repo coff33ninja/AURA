@@ -1,0 +1,287 @@
+{
+  "mappings": {
+    "New": [
+      "New_dup1",
+      "New_dup2",
+      "New_dup3",
+      "New_dup4",
+      "New_dup5",
+      "New_dup6",
+      "New_dup7",
+      "New_dup8",
+      "New_dup9",
+      "New_dup10"
+    ]
+  },
+  "groups": {
+    "New": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New",
+      "presetName": "neutral"
+    },
+    "New_dup1": {
+      "binds": [
+        {
+          "index": 41,
+          "mesh": 0,
+          "weight": 61.8131866
+        },
+        {
+          "index": 33,
+          "mesh": 0,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup1",
+      "presetName": "a"
+    },
+    "New_dup2": {
+      "binds": [
+        {
+          "index": 44,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 1,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 37,
+          "mesh": 0,
+          "weight": 41.2087936
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup2",
+      "presetName": "i"
+    },
+    "New_dup3": {
+      "binds": [
+        {
+          "index": 43,
+          "mesh": 0,
+          "weight": 56.3186874
+        },
+        {
+          "index": 14,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 40,
+          "mesh": 0,
+          "weight": 37.6373634
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup3",
+      "presetName": "u"
+    },
+    "New_dup4": {
+      "binds": [
+        {
+          "index": 44,
+          "mesh": 0,
+          "weight": 69.78022
+        },
+        {
+          "index": 1,
+          "mesh": 0,
+          "weight": 53.5714264
+        },
+        {
+          "index": 25,
+          "mesh": 0,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup4",
+      "presetName": "e"
+    },
+    "New_dup5": {
+      "binds": [
+        {
+          "index": 45,
+          "mesh": 0,
+          "weight": 55.76923
+        },
+        {
+          "index": 32,
+          "mesh": 0,
+          "weight": 85.98901
+        },
+        {
+          "index": 14,
+          "mesh": 0,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup5",
+      "presetName": "o"
+    },
+    "New_dup6": {
+      "binds": [
+        {
+          "index": 24,
+          "mesh": 0,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup6",
+      "presetName": "blink"
+    },
+    "New_dup7": {
+      "binds": [
+        {
+          "index": 3,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 57,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 39,
+          "mesh": 0,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup7",
+      "presetName": "joy"
+    },
+    "New_dup8": {
+      "binds": [
+        {
+          "index": 4,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 35,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 58,
+          "mesh": 0,
+          "weight": 55.21978
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup8",
+      "presetName": "angry"
+    },
+    "New_dup9": {
+      "binds": [
+        {
+          "index": 34,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 37,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 15,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 59,
+          "mesh": 0,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup9",
+      "presetName": "sorrow"
+    },
+    "New_dup10": {
+      "binds": [
+        {
+          "index": 57,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 3,
+          "mesh": 0,
+          "weight": 100
+        },
+        {
+          "index": 35,
+          "mesh": 0,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "New_dup10",
+      "presetName": "fun"
+    },
+    "Blink_L": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Blink_L",
+      "presetName": "blink_l"
+    },
+    "Blink_R": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Blink_R",
+      "presetName": "blink_r"
+    },
+    "LookUp": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "LookUp",
+      "presetName": "lookup"
+    },
+    "LookDown": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "LookDown",
+      "presetName": "lookdown"
+    },
+    "LookLeft": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "LookLeft",
+      "presetName": "lookleft"
+    },
+    "LookRight": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "LookRight",
+      "presetName": "lookright"
+    }
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "mappings": {},
+  "groups": {
+    "Neutral": {
+      "binds": [
+        {
+          "index": 31,
+          "mesh": 1,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Neutral",
+      "presetName": "neutral"
+    },
+    "A": {
+      "binds": [
+        {
+          "index": 14,
+          "mesh": 1,
+          "weight": 66.6
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "A",
+      "presetName": "a"
+    },
+    "I": {
+      "binds": [
+        {
+          "index": 21,
+          "mesh": 1,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "I",
+      "presetName": "i"
+    },
+    "U": {
+      "binds": [
+        {
+          "index": 18,
+          "mesh": 1,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "U",
+      "presetName": "u"
+    },
+    "E": {
+      "binds": [
+        {
+          "index": 19,
+          "mesh": 1,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "E",
+      "presetName": "e"
+    },
+    "O": {
+      "binds": [
+        {
+          "index": 17,
+          "mesh": 1,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "O",
+      "presetName": "o"
+    },
+    "Blink": {
+      "binds": [
+        {
+          "index": 13,
+          "mesh": 1,
+          "weight": 100
+        },
+        {
+          "index": 43,
+          "mesh": 1,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Blink",
+      "presetName": "blink"
+    },
+    "Joy": {
+      "binds": [
+        {
+          "index": 12,
+          "mesh": 1,
+          "weight": 80.4
+        },
+        {
+          "index": 32,
+          "mesh": 1,
+          "weight": 62.6
+        },
+        {
+          "index": 50,
+          "mesh": 1,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Joy",
+      "presetName": "joy"
+    },
+    "Angry": {
+      "binds": [
+        {
+          "index": 5,
+          "mesh": 1,
+          "weight": 67.9
+        },
+        {
+          "index": 26,
+          "mesh": 1,
+          "weight": 100
+        },
+        {
+          "index": 54,
+          "mesh": 1,
+          "weight": 100
+        },
+        {
+          "index": 4,
+          "mesh": 2,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Angry",
+      "presetName": "angry"
+    },
+    "Sorrow": {
+      "binds": [
+        {
+          "index": 1,
+          "mesh": 1,
+          "weight": 13.3
+        },
+        {
+          "index": 7,
+          "mesh": 1,
+          "weight": 100
+        },
+        {
+          "index": 25,
+          "mesh": 1,
+          "weight": 100
+        },
+        {
+          "index": 53,
+          "mesh": 1,
+          "weight": 100
+        },
+        {
+          "index": 6,
+          "mesh": 2,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Sorrow",
+      "presetName": "sorrow"
+    },
+    "Fun": {
+      "binds": [
+        {
+          "index": 37,
+          "mesh": 1,
+          "weight": 100
+        },
+        {
+          "index": 55,
+          "mesh": 1,
+          "weight": 100
+        },
+        {
+          "index": 3,
+          "mesh": 2,
+          "weight": 100
+        }
+      ],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Fun",
+      "presetName": "fun"
+    },
+    "LookUp": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "LookUp",
+      "presetName": "lookup"
+    },
+    "LookDown": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "LookDown",
+      "presetName": "lookdown"
+    },
+    "LookLeft": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "LookLeft",
+      "presetName": "lookleft"
+    },
+    "LookRight": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "LookRight",
+      "presetName": "lookright"
+    },
+    "Blink_L": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Blink_L",
+      "presetName": "blink_l"
+    },
+    "Blink_R": {
+      "binds": [],
+      "isBinary": false,
+      "materialValues": [],
+      "name": "Blink_R",
+      "presetName": "blink_r"
+    }
+  }
+}

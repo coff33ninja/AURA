@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>VRM Loader Test</title>
+  <style>
+    body { margin: 0; background: #000; color: #0f0; font-family: monospace; padding: 20px; }
+    #log { background: #000; border: 1px solid #0f0; padding: 10px; white-space: pre-wrap; word-wrap: break-word; max-height: 80vh; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>VRM Loader Test</h2>
+  <div id="log"></div>
+  
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js",
+      "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.2.0/dist/index.js"
+    }
+  }
+  </script>
+  
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/loaders/GLTFLoader.js';
+    import { VRMLoaderPlugin } from '@pixiv/three-vrm';
+    
+    const log = (msg) => {
+      console.log(msg);
+      document.getElementById('log').innerHTML += msg + '<br>';
+    };
+    
+    const logErr = (msg) => {
+      console.error(msg);
+      document.getElementById('log').innerHTML += '<span style="color:red">' + msg + '</span><br>';
+    };
+    
+    log('Starting VRM test...');
+    log('THREE version: ' + THREE.REVISION);
+    
+    const loader = new GLTFLoader();
+    loader.register((parser) => new VRMLoaderPlugin(parser));
+    
+    log('Loader registered');
+    
+    loader.load(
+      '/VRM-Models/Hu_Tao.vrm',
+      (gltf) => {
+        log('✓ GLTF loaded');
+        log('userData keys: ' + Object.keys(gltf.userData).join(', '));
+        
+        if (gltf.userData.vrm) {
+          log('✓ VRM object found!');
+          log('VRM humanoid: ' + (gltf.userData.vrm.humanoid ? 'YES' : 'NO'));
+        } else {
+          logErr('✗ VRM object NOT found in userData');
+          logErr('userData: ' + JSON.stringify(gltf.userData, null, 2));
+        }
+      },
+      (progress) => {
+        const pct = Math.round(100 * progress.loaded / progress.total);
+        log(`Loading ${pct}%`);
+      },
+      (error) => {
+        logErr('✗ Load error: ' + (error.message || error));
+        logErr('Stack: ' + (error.stack || 'N/A'));
+      }
+    );
+  </script>
+</body>
+</html>

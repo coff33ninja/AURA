@@ -1,0 +1,7 @@
+{
+  "name": "Gemini Neural Avatar",
+  "description": "Real-time voice-activated AI avatar using Gemini Live API and Three.js visualization.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
