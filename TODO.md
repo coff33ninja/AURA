@@ -3,10 +3,9 @@
 ## 🔴 High Priority
 
 ### Dynamic Model Height/Camera Setup
-- [ ] Compute bounding box on VRM load via `THREE.Box3().setFromObject(vrm.scene)`
-- [ ] Auto-adjust camera Y position based on model height (eye level ~85%)
-- [ ] Auto-adjust camera Z distance for proper framing (taller = further back)
-- [ ] Update `camera.lookAt()` target to model's face/chest area
+- [x] Compute bounding box on VRM load via `THREE.Box3().setFromObject(vrm.scene)`
+- [x] Lower model Y position if height exceeds threshold (keep scale for walking)
+- [x] Auto-adjust camera Y and lookAt target based on model bounds
 - [ ] Optional: Create `vrm-metadata.json` for manual overrides per model
 - [ ] Smooth camera transitions when switching models
 

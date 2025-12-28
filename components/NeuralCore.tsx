@@ -437,6 +437,9 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
 
   // Update posture based on emotion
   const updatePosture = (emotion: string) => {
+    // Preserve the base Y offset from height adjustment
+    const baseY = walkStateRef.current.position.y;
+    
     switch (emotion) {
       case 'joy':
       case 'excited':
@@ -459,7 +462,9 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         break;
       default:
         postureStateRef.current = 'neutral';
-        bodyPositionRef.current = { x: 0, y: 0, z: 0 };
+        bodyPositionRef.current.x = 0;
+        bodyPositionRef.current.z = 0;
+        // Keep Y unchanged - it holds the height offset
         bodyRotationRef.current = { x: 0, y: 0, z: 0 };
     }
   };
@@ -627,6 +632,37 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         scene.add(vrm.scene);
         vrmRef.current = vrm;
         
+        // === Dynamic Height Adjustment ===
+        // Compute model bounds and adjust Y position if too tall
+        // We DON'T scale - just lower the model so walking still works
+        const box = new THREE.Box3().setFromObject(vrm.scene);
+        const modelHeight = box.max.y - box.min.y;
+        const modelCenter = new THREE.Vector3();
+        box.getCenter(modelCenter);
+        
+        // Target: model's head should be around Y=1.5 for good framing
+        // Standard camera is at Y=1.4, looking at Y=1.3
+        const targetHeadY = 1.5;
+        const headRatio = 0.9; // Head is roughly at 90% of model height
+        const currentHeadY = box.min.y + (modelHeight * headRatio);
+        const yOffset = targetHeadY - currentHeadY;
+        
+        // Apply offset to model position (this becomes the base Y for walking)
+        vrm.scene.position.y = yOffset;
+        walkStateRef.current.position.y = yOffset;
+        bodyPositionRef.current.y = yOffset;
+        
+        // Adjust camera based on model proportions
+        const eyeLevelY = box.min.y + yOffset + (modelHeight * 0.85);
+        const chestY = box.min.y + yOffset + (modelHeight * 0.7);
+        
+        if (cameraRef.current) {
+          cameraRef.current.position.set(0, eyeLevelY, 1.5);
+          cameraRef.current.lookAt(0, chestY, 0);
+        }
+        
+        console.log(`VRM Height: ${modelHeight.toFixed(2)}m, Y-offset: ${yOffset.toFixed(2)}, Camera Y: ${eyeLevelY.toFixed(2)}`);
+        
         // Setup animation mixer
         mixerRef.current = new THREE.AnimationMixer(vrm.scene);
         availableAnimations.current.clear();
@@ -703,12 +739,10 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
               walkStateRef.current.position.x = Math.max(-2, Math.min(2, walkStateRef.current.position.x));
               walkStateRef.current.position.z = Math.max(-1.5, Math.min(1.5, walkStateRef.current.position.z));
               
-              // Apply to VRM scene
-              vrm.scene.position.copy(new THREE.Vector3(
-                walkStateRef.current.position.x,
-                walkStateRef.current.position.y,
-                walkStateRef.current.position.z
-              ));
+              // Apply to VRM scene (preserve base Y offset from height adjustment)
+              vrm.scene.position.x = walkStateRef.current.position.x;
+              vrm.scene.position.y = walkStateRef.current.position.y;
+              vrm.scene.position.z = walkStateRef.current.position.z;
               
               // Animate legs procedurally
               legAngleRef.current += delta * walkStateRef.current.speed * 8; // Leg animation speed
