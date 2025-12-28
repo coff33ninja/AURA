@@ -7,6 +7,8 @@ import {
   downsampleBuffer,
 } from "../utils/audioUtils";
 import { conversationStore } from "./conversationStore";
+import { generate as generateAIInstructions, generateMinimal } from "./aiInstructionGenerator";
+import { ModelBehaviors } from "../types/behaviorTypes";
 
 // VrmCommand types for app wiring
 export type VrmCommand =
@@ -62,6 +64,7 @@ export class LiveManager {
   private personalityInstruction: string | null = null;
   private availableExpressions: string[] = []; // dynamically set by app when VRM loads
   private isReconnecting: boolean = false;
+  private currentBehaviors: ModelBehaviors | null = null; // Loaded from BehaviorManager
 
   // Reconnection state
   private reconnectAttempts: number = 0;
@@ -125,6 +128,15 @@ export class LiveManager {
       expressions.length,
       "expressions"
     );
+  }
+
+  public async setBehaviors(behaviors: ModelBehaviors) {
+    this.currentBehaviors = behaviors;
+    console.log(
+      "[LiveManager] Behaviors updated for model:",
+      behaviors.modelName
+    );
+    // Don't auto-reconnect - let user reconnect manually to apply changes
   }
 
   public async sendText(text: string) {
@@ -315,12 +327,37 @@ export class LiveManager {
         const conversationHistory =
           await conversationStore.getConversationSummary(10);
 
-        // Build system instruction with embodiment commands
-        const expressionList = this.availableExpressions.length > 0 
-          ? this.availableExpressions.join(', ') 
-          : 'joy, angry, sorrow, fun, blink, a, i, u, e, o';
+        // Build system instruction - use AIInstructionGenerator if behaviors are loaded
+        let systemInstruction: string;
         
-        let systemInstruction = `YOU ARE AURA - AN EMBODIED AI WITH A VRM AVATAR BODY
+        if (this.currentBehaviors) {
+          // Use dynamic instruction generation from loaded behaviors
+          const behaviorInstructions = generateAIInstructions(this.currentBehaviors);
+          
+          systemInstruction = `YOU ARE AURA - AN EMBODIED AI WITH A VRM AVATAR BODY
+
+You have a physical form and MUST express yourself through it. Use expressions and gestures naturally as you speak.
+
+${behaviorInstructions}
+
+COMMAND FORMAT (embed these naturally in your responses):
+[COMMAND:EXPRESSION:name:intensity] - Set expression (0.0-1.0), e.g. [COMMAND:EXPRESSION:joy:0.8]
+[COMMAND:GESTURE:name] - Perform gesture, e.g. [COMMAND:GESTURE:wave]
+[EMOTION:state] - Complex emotion (use available reactions above)
+
+RULES:
+- Always include at least one expression command per response
+- Match expressions to your emotional tone
+- Use gestures to emphasize key points
+- Speak naturally and conversationally
+${this.personalityInstruction ? `\nPERSONALITY: ${this.personalityInstruction}` : ''}`;
+        } else {
+          // Fallback to legacy hardcoded instruction
+          const expressionList = this.availableExpressions.length > 0 
+            ? this.availableExpressions.join(', ') 
+            : 'joy, angry, sorrow, fun, blink, a, i, u, e, o';
+          
+          systemInstruction = `YOU ARE AURA - AN EMBODIED AI WITH A VRM AVATAR BODY
 
 You have a physical form and MUST express yourself through it. Use expressions and gestures naturally as you speak.
 
@@ -338,6 +375,7 @@ RULES:
 - Use gestures to emphasize key points
 - Speak naturally and conversationally
 ${this.personalityInstruction ? `\nPERSONALITY: ${this.personalityInstruction}` : ''}`;
+        }
 
         // Add conversation history if available (limit to prevent overly long instructions)
         if (conversationHistory) {
@@ -360,6 +398,7 @@ ${this.personalityInstruction ? `\nPERSONALITY: ${this.personalityInstruction}` 
           voice: this.voiceName,
           systemInstructionLength: systemInstruction.length,
           hasConversationHistory: !!conversationHistory,
+          usingBehaviors: !!this.currentBehaviors,
         });
         console.log("[LiveManager] System instruction preview:", systemInstruction.substring(0, 500) + "...");
 

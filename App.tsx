@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ConnectionState } from "./types";
 import { LiveManager, VrmCommand } from "./services/liveManager";
-import { NeuralCore, PoseSettings } from "./components/NeuralCore";
+import { NeuralCore, PoseSettings, NeuralCoreHandle } from "./components/NeuralCore";
+import { BehaviorEditor } from "./components/BehaviorEditor";
 import { conversationStore } from "./services/conversationStore";
 import { VrmConfig } from "./types/vrmConfig";
+import { 
+  loadModelBehaviors, 
+  onBehaviorsLoaded, 
+  onBehaviorChanged,
+  getCurrentBehaviors,
+  updateBehavior,
+  saveToStorage
+} from "./services/behaviorManager";
+import type { ModelBehaviors, BehaviorType, BehaviorConfigs } from "./types/behaviorTypes";
 
 // localStorage keys for user preferences
 const STORAGE_KEYS = {
@@ -28,7 +38,9 @@ const App: React.FC = () => {
   const subtitleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const liveManagerRef = useRef<LiveManager | null>(null);
+  const neuralCoreRef = useRef<NeuralCoreHandle>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentBehaviors, setCurrentBehaviors] = useState<ModelBehaviors | null>(null);
 
   // Dynamic VRM model loading
   const [availableVrms, setAvailableVrms] = useState<string[]>([]);
@@ -111,6 +123,7 @@ const App: React.FC = () => {
     totalSessions: 0,
   });
   const [poseEditorOpen, setPoseEditorOpen] = useState(false);
+  const [behaviorEditorOpen, setBehaviorEditorOpen] = useState(false);
   
   // Per-model pose settings stored as { modelName: PoseSettings }
   const [allPoseSettings, setAllPoseSettings] = useState<Record<string, PoseSettings>>(() => {
@@ -140,6 +153,31 @@ const App: React.FC = () => {
   const handleConfigLoaded = useCallback((config: VrmConfig) => {
     setLoadedConfig(config);
     console.log('[App] Config loaded for', config.modelName, config);
+  }, []);
+  
+  // Handler for behavior updates from BehaviorEditor
+  const handleBehaviorChange = useCallback(<T extends BehaviorType>(
+    type: T,
+    config: Partial<BehaviorConfigs[T]>
+  ) => {
+    updateBehavior(type, config);
+    // Save to localStorage for persistence
+    if (selectedVrm) {
+      saveToStorage(selectedVrm.replace('.vrm', ''));
+    }
+  }, [selectedVrm]);
+  
+  // Handler for preview callbacks from BehaviorEditor
+  const handlePreviewGesture = useCallback((gestureName: string) => {
+    neuralCoreRef.current?.previewGesture(gestureName);
+  }, []);
+  
+  const handlePreviewExpression = useCallback((expressionName: string, value: number) => {
+    neuralCoreRef.current?.previewExpression(expressionName, value);
+  }, []);
+  
+  const handlePreviewReaction = useCallback((reactionName: string) => {
+    neuralCoreRef.current?.previewReaction(reactionName);
   }, []);
   
   const updatePoseSettings = (updates: Partial<PoseSettings>) => {
@@ -260,6 +298,50 @@ const App: React.FC = () => {
     }
   }, [vrmExpressions]);
 
+  // Load behaviors when model changes and wire up to LiveManager
+  useEffect(() => {
+    if (!selectedVrm) return;
+    
+    const modelName = selectedVrm.replace('.vrm', '');
+    
+    // Load behaviors for the selected model
+    loadModelBehaviors(modelName).then(behaviors => {
+      setCurrentBehaviors(behaviors);
+      
+      // Update LiveManager with loaded behaviors
+      if (liveManagerRef.current) {
+        liveManagerRef.current.setBehaviors(behaviors);
+      }
+      
+      console.log('[App] Behaviors loaded for', modelName);
+    }).catch(err => {
+      console.warn('[App] Failed to load behaviors:', err);
+    });
+    
+    // Listen for behavior changes (from BehaviorEditor)
+    const unsubscribeLoaded = onBehaviorsLoaded((behaviors) => {
+      setCurrentBehaviors(behaviors);
+      if (liveManagerRef.current) {
+        liveManagerRef.current.setBehaviors(behaviors);
+      }
+    });
+    
+    const unsubscribeChanged = onBehaviorChanged(() => {
+      const behaviors = getCurrentBehaviors();
+      if (behaviors) {
+        setCurrentBehaviors(behaviors);
+        if (liveManagerRef.current) {
+          liveManagerRef.current.setBehaviors(behaviors);
+        }
+      }
+    });
+    
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeChanged();
+    };
+  }, [selectedVrm]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -350,6 +432,7 @@ const App: React.FC = () => {
       <div className="absolute inset-0 z-0">
         {selectedVrm && (
           <NeuralCore
+            ref={neuralCoreRef}
             volume={volume}
             isActive={isConnected}
             vrmCommand={vrmCommand}
@@ -363,7 +446,65 @@ const App: React.FC = () => {
 
       {/* HUD Overlay Layer */}
       <div className="absolute inset-0 z-10 pointer-events-none">
-        {/* Right side: Pose Editor Panel */}
+        {/* Right side: Behavior Editor Panel */}
+        {behaviorEditorOpen && currentBehaviors && (
+          <div className="absolute right-4 top-16 bottom-4 w-80 pointer-events-auto overflow-hidden">
+            <BehaviorEditor
+              isOpen={behaviorEditorOpen}
+              modelName={selectedVrm.replace('.vrm', '')}
+              behaviors={currentBehaviors}
+              onBehaviorChange={handleBehaviorChange}
+              onPreviewGesture={handlePreviewGesture}
+              onPreviewExpression={handlePreviewExpression}
+              onPreviewReaction={handlePreviewReaction}
+              onClose={() => setBehaviorEditorOpen(false)}
+              onExport={() => {
+                // Export current behaviors as JSON file
+                const behaviors = getCurrentBehaviors();
+                if (behaviors) {
+                  const blob = new Blob([JSON.stringify(behaviors, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${selectedVrm.replace('.vrm', '')}.behaviors.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }
+              }}
+              onImport={(file) => {
+                // Import behaviors from JSON file
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  try {
+                    const json = e.target?.result as string;
+                    const { importConfig } = require('./services/behaviorManager');
+                    const result = importConfig(json);
+                    if (!result.valid) {
+                      alert('Import failed: ' + result.errors.join(', '));
+                    } else {
+                      // Refresh behaviors state
+                      const behaviors = getCurrentBehaviors();
+                      if (behaviors) {
+                        setCurrentBehaviors({ ...behaviors });
+                      }
+                    }
+                  } catch (err) {
+                    alert('Failed to parse JSON file');
+                  }
+                };
+                reader.readAsText(file);
+              }}
+              onSave={() => {
+                // Save to localStorage
+                if (selectedVrm) {
+                  saveToStorage(selectedVrm.replace('.vrm', ''));
+                }
+              }}
+            />
+          </div>
+        )}
+        
+        {/* Right side: Pose Editor Panel (legacy) */}
         {poseEditorOpen && (
           <div className="absolute right-4 top-16 w-64 pointer-events-auto">
             <div className="hud-panel p-3">
@@ -745,11 +886,25 @@ const App: React.FC = () => {
                   </div>
                 </SettingRow>
 
+                <SettingRow label="BEHAVIORS">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBehaviorEditorOpen(!behaviorEditorOpen);
+                      setPoseEditorOpen(false);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full py-1.5 text-[10px] tracking-widest text-cyan-400/60 border border-cyan-500/20 hover:border-cyan-500/40 hover:text-cyan-400 rounded transition-colors">
+                    EDIT BEHAVIORS
+                  </button>
+                </SettingRow>
+
                 <SettingRow label="POSE">
                   <button
                     type="button"
                     onClick={() => {
                       setPoseEditorOpen(!poseEditorOpen);
+                      setBehaviorEditorOpen(false);
                       setMenuOpen(false);
                     }}
                     className="w-full py-1.5 text-[10px] tracking-widest text-cyan-400/60 border border-cyan-500/20 hover:border-cyan-500/40 hover:text-cyan-400 rounded transition-colors">
