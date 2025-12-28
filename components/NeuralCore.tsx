@@ -68,12 +68,16 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
   
   // Postural state (position and root rotation)
   const bodyPositionRef = useRef({ x: 0, y: 0, z: 0 });
-  const bodyRotationRef = useRef({ x: 0, y: Math.PI, z: 0 });
+  const bodyRotationRef = useRef({ x: 0, y: Math.PI, z: 0 }); // Math.PI = face camera
   const postureStateRef = useRef<'neutral' | 'leaning_forward' | 'leaning_back' | 'rotating_toward_camera'>('neutral');
   
   // Walk/movement state
   const walkStateRef = useRef({ speed: 0, direction: 0, isWalking: false, position: { x: 0, y: 0, z: 0 } });
   const legAngleRef = useRef(0); // For procedural leg animation
+
+  // Camera smooth transition targets
+  const cameraTargetPosition = useRef({ x: 0, y: 1.4, z: 1.5 });
+  const cameraTargetLookAt = useRef({ x: 0, y: 1.3, z: 0 });
 
   // Resolve an expression alias (presetName like 'joy') to actual VRM expression names
   // This allows Gemini to use consistent names across all models
@@ -488,7 +492,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         bodyPositionRef.current.x = 0;
         bodyPositionRef.current.z = 0;
         // Keep Y unchanged - it holds the height offset
-        bodyRotationRef.current = { x: 0, y: 0, z: 0 };
+        bodyRotationRef.current = { x: 0, y: Math.PI, z: 0 }; // Math.PI keeps model facing camera
     }
   };
 
@@ -655,6 +659,14 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         scene.add(vrm.scene);
         vrmRef.current = vrm;
         
+        // Clear state from previous model
+        gestureQueue.current = [];
+        gestureStateRef.current = { active: false, elapsed: 0, duration: 0, currentGesture: null };
+        expressionPersist.current = {};
+        expressionTargets.current = {};
+        expressionTargetsActual.current = {};
+        boneTargets.current = {};
+        
         // === Dynamic Height Adjustment ===
         // Compute model bounds and adjust position/camera for proper framing
         // We DON'T scale - just adjust Y position so walking still works
@@ -676,18 +688,17 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         // Camera setup: pull back more for taller models, frame upper body
         const headY = box.min.y + yOffset + (modelHeight * 0.92); // Top of head
         const chestY = box.min.y + yOffset + (modelHeight * chestRatio);
-        const cameraTargetY = (headY + chestY) / 2; // Look at midpoint between head and chest
+        const camLookAtY = (headY + chestY) / 2; // Look at midpoint between head and chest
         
         // Camera distance: further back for taller models to show more
         const baseDistance = 2.0;
         const distanceScale = Math.max(1.0, modelHeight / 1.6); // 1.6m is "standard" height
         const cameraZ = baseDistance * distanceScale;
-        const cameraY = cameraTargetY + 0.1; // Slightly above target
+        const cameraY = camLookAtY + 0.1; // Slightly above target
         
-        if (cameraRef.current) {
-          cameraRef.current.position.set(0, cameraY, cameraZ);
-          cameraRef.current.lookAt(0, cameraTargetY, 0);
-        }
+        // Set camera targets for smooth transition (animation loop will lerp to these)
+        cameraTargetPosition.current = { x: 0, y: cameraY, z: cameraZ };
+        cameraTargetLookAt.current = { x: 0, y: camLookAtY, z: 0 };
         
         console.log(`VRM Height: ${modelHeight.toFixed(2)}m, Y-offset: ${yOffset.toFixed(2)}, Camera: Y=${cameraY.toFixed(2)} Z=${cameraZ.toFixed(2)}`);
         
@@ -938,7 +949,21 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
             vrm.update(delta);
         }
 
-
+        // Smooth camera transitions when switching models
+        if (cameraRef.current) {
+          const camLerpSpeed = 3 * delta; // Smooth but responsive
+          const cam = cameraRef.current;
+          const target = cameraTargetPosition.current;
+          const lookAt = cameraTargetLookAt.current;
+          
+          // Lerp position
+          cam.position.x += (target.x - cam.position.x) * camLerpSpeed;
+          cam.position.y += (target.y - cam.position.y) * camLerpSpeed;
+          cam.position.z += (target.z - cam.position.z) * camLerpSpeed;
+          
+          // Update lookAt target
+          cam.lookAt(lookAt.x, lookAt.y, lookAt.z);
+        }
         
         if (particlesRef.current) {
             particlesRef.current.rotation.y += 0.005;

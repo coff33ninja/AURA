@@ -60,20 +60,26 @@ export function downsampleBuffer(buffer: Float32Array, inputRate: number, output
 }
 
 // Custom manual decoding of raw PCM data from Gemini (24kHz, 1 channel usually)
+// Uses a shared AudioContext to avoid memory leaks from creating new contexts per call
+let sharedDecodeContext: AudioContext | null = null;
+
 export function decodeAudioData(
     data: Uint8Array,
     sampleRate: number = 24000
 ): AudioBuffer {
-    // Do not force sampleRate on the context itself, as it might fail on some hardware.
-    // The AudioBuffer can have a different sample rate than the context.
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Reuse a single AudioContext for decoding to prevent memory leaks
+    // The context is only used to create AudioBuffer objects, not for playback
+    if (!sharedDecodeContext || sharedDecodeContext.state === 'closed') {
+        sharedDecodeContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    
     const dataInt16 = new Int16Array(data.buffer);
     // Mono channel assumption for Gemini Live
     const numChannels = 1; 
     const frameCount = dataInt16.length;
     
     // Create buffer with the specific sample rate of the audio (24kHz)
-    const buffer = audioCtx.createBuffer(numChannels, frameCount, sampleRate);
+    const buffer = sharedDecodeContext.createBuffer(numChannels, frameCount, sampleRate);
     const channelData = buffer.getChannelData(0);
     
     for (let i = 0; i < frameCount; i++) {
@@ -81,6 +87,14 @@ export function decodeAudioData(
     }
     
     return buffer;
+}
+
+// Clean up the shared decode context (call on app unmount if needed)
+export function closeDecodeContext(): void {
+    if (sharedDecodeContext && sharedDecodeContext.state !== 'closed') {
+        sharedDecodeContext.close();
+        sharedDecodeContext = null;
+    }
 }
 
 // Calculate RMS (Root Mean Square) for volume visualization

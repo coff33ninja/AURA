@@ -7,7 +7,7 @@
 - [x] Lower model Y position if height exceeds threshold (keep scale for walking)
 - [x] Auto-adjust camera Y and lookAt target based on model bounds
 - [ ] Optional: Create `vrm-metadata.json` for manual overrides per model
-- [ ] Smooth camera transitions when switching models
+- [x] Smooth camera transitions when switching models
 
 ### Expression System Fixes
 - [x] Lip sync uses `aa`, `ih`, `u`, `e`, `o` but sidecars use `a`, `i`, `u`, `e`, `o` - normalize naming
@@ -17,15 +17,15 @@
 ## 🟡 Medium Priority
 
 ### Code Quality / Deprecations
-- [ ] Replace deprecated `ScriptProcessorNode` with `AudioWorkletNode` in liveManager.ts
+- [x] Replace deprecated `ScriptProcessorNode` with `AudioWorkletNode` in liveManager.ts (with fallback)
 - [x] Remove unused `currentMicVolume` variable - NOW USED for mic level indicator in UI
 - [x] Remove unused `initialKeyIndex` variable in liveManager.ts - removed (was debug only)
 - [x] `outerRingRef` is declared but never used in NeuralCore.tsx - removed
 - [x] `videoRef` and `mediaStreamRef` removed - camera feed wasn't being used
-- [ ] Add `type="button"` to all buttons in App.tsx for accessibility
+- [x] Add `type="button"` to all buttons in App.tsx for accessibility
 
 ### Audio System
-- [ ] `decodeAudioData` creates a new AudioContext every call - should reuse existing context
+- [x] `decodeAudioData` creates a new AudioContext every call - now uses shared singleton context
 - [ ] Consider implementing proper phoneme detection instead of volume-based lip sync
 - [x] Add mic volume indicator - now shows both mic input and AI output levels
 
@@ -36,9 +36,9 @@
 - [ ] Clean up previous VRM properly on model switch (dispose geometries/materials)
 
 ### UI/UX
-- [ ] Move inline styles to CSS classes (volume bar heights)
-- [ ] Add keyboard shortcuts (Space to connect, Esc to close menu)
-- [ ] Remember user preferences in localStorage (selected model, voice, personality)
+- [x] Move inline styles to CSS classes (volume bar heights)
+- [x] Add keyboard shortcuts (Space to connect/disconnect, Esc to close menu)
+- [x] Remember user preferences in localStorage (selected model, voice, personality, mode)
 - [ ] Add fullscreen toggle
 - [ ] Mobile responsive adjustments
 
@@ -77,8 +77,8 @@
 
 - [ ] Model switching while connected may cause expression sync issues
 - [ ] Some VRM models have inverted normals on certain meshes
-- [ ] Gesture queue doesn't clear on model switch
-- [ ] `bodyRotationRef` initializes with `y: Math.PI` but neutral posture resets to `y: 0`
+- [x] Gesture queue doesn't clear on model switch - now clears in VRM load callback
+- [x] `bodyRotationRef` initializes with `y: Math.PI` - CORRECT (makes model face camera), neutral posture also uses Math.PI
 
 ## 📝 Documentation
 

@@ -27,7 +27,8 @@ export class LiveManager {
     
     // Audio Graph Nodes
     private inputSource: MediaStreamAudioSourceNode | null = null;
-    private processor: ScriptProcessorNode | null = null;
+    private processor: ScriptProcessorNode | null = null; // Fallback for older browsers
+    private workletNode: AudioWorkletNode | null = null; // Modern AudioWorklet
     private analyser: AnalyserNode | null = null;
     private gainNode: GainNode | null = null;
 
@@ -203,7 +204,7 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
                     callbacks: {
                         onopen: () => {
                             this.onStatusChange("Connected");
-                            this.startRecording(stream);
+                            this.startRecording(stream).catch(e => console.error('Failed to start recording:', e));
                         },
                         onmessage: async (message) => {
                             let textContent = '';
@@ -347,10 +348,54 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
     }
 
 
-    private startRecording(stream: MediaStream) {
+    private async startRecording(stream: MediaStream) {
         if (!this.inputAudioContext) return;
 
         this.inputSource = this.inputAudioContext.createMediaStreamSource(stream);
+        
+        // Try to use AudioWorklet (modern, non-deprecated)
+        // Falls back to ScriptProcessorNode for older browsers
+        const useWorklet = typeof AudioWorkletNode !== 'undefined' && this.inputAudioContext.audioWorklet;
+        
+        if (useWorklet) {
+            try {
+                await this.inputAudioContext.audioWorklet.addModule('/audio-processor.worklet.js');
+                this.workletNode = new AudioWorkletNode(this.inputAudioContext, 'mic-processor');
+                
+                this.workletNode.port.onmessage = (event) => {
+                    if (!this.inputAudioContext || !this.sessionPromise) return;
+                    
+                    const { buffer, rms } = event.data;
+                    
+                    this.currentMicVolume = rms;
+                    this.onMicVolumeChange(Math.min(1, rms * 3));
+                    
+                    const currentSampleRate = this.inputAudioContext.sampleRate;
+                    const downsampledData = downsampleBuffer(new Float32Array(buffer), currentSampleRate, 16000);
+                    
+                    const pcm16 = floatTo16BitPCM(downsampledData);
+                    const base64Data = arrayBufferToBase64(pcm16);
+                    
+                    this.sessionPromise.then(session => {
+                        session.sendRealtimeInput({
+                            media: {
+                                mimeType: "audio/pcm;rate=16000",
+                                data: base64Data
+                            }
+                        });
+                    });
+                };
+                
+                this.inputSource.connect(this.workletNode);
+                // AudioWorklet doesn't need to connect to destination
+                console.log('Using AudioWorklet for mic input');
+                return;
+            } catch (e) {
+                console.warn('AudioWorklet failed, falling back to ScriptProcessorNode:', e);
+            }
+        }
+        
+        // Fallback: ScriptProcessorNode (deprecated but widely supported)
         this.processor = this.inputAudioContext.createScriptProcessor(4096, 1, 1);
 
         this.processor.onaudioprocess = (e) => {
@@ -383,6 +428,7 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
 
         this.inputSource.connect(this.processor);
         this.processor.connect(this.inputAudioContext.destination);
+        console.log('Using ScriptProcessorNode for mic input (fallback)');
     }
 
     private scheduleAudio(buffer: AudioBuffer) {
@@ -436,12 +482,19 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
     public disconnect() {
         this.visualizerActive = false;
         
+        if (this.workletNode) {
+            this.workletNode.disconnect();
+            this.workletNode.port.close();
+            this.workletNode = null;
+        }
         if (this.processor) {
             this.processor.disconnect();
             this.processor.onaudioprocess = null;
+            this.processor = null;
         }
         if (this.inputSource) {
             this.inputSource.disconnect();
+            this.inputSource = null;
         }
         if (this.inputAudioContext && this.inputAudioContext.state !== 'closed') {
             this.inputAudioContext.close();
@@ -450,6 +503,8 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
             this.outputAudioContext.close();
         }
         
+        this.inputAudioContext = null;
+        this.outputAudioContext = null;
         this.sessionPromise = null;
         this.client = null;
         this.nextStartTime = 0;

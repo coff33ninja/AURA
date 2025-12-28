@@ -148,3 +148,10 @@ body {
   pointer-events: none;
   border-radius: inherit;
 }
+
+/* Volume bar heights for audio level indicators */
+.volume-bar-1 { height: 7px; }
+.volume-bar-2 { height: 10px; }
+.volume-bar-3 { height: 13px; }
+.volume-bar-4 { height: 16px; }
+.volume-bar-5 { height: 19px; }

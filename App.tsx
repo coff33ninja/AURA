@@ -3,6 +3,14 @@ import { ConnectionState } from './types';
 import { LiveManager, VrmCommand } from './services/liveManager';
 import { NeuralCore } from './components/NeuralCore';
 
+// localStorage keys for user preferences
+const STORAGE_KEYS = {
+  selectedVrm: 'aura_selectedVrm',
+  selectedVoice: 'aura_selectedVoice',
+  selectedPersonality: 'aura_selectedPersonality',
+  selectedMode: 'aura_selectedMode',
+};
+
 const App: React.FC = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
   const [statusText, setStatusText] = useState("STANDBY");
@@ -17,21 +25,35 @@ const App: React.FC = () => {
   
   // Dynamic VRM model loading
   const [availableVrms, setAvailableVrms] = useState<string[]>([]);
-  const [selectedVrm, setSelectedVrm] = useState<string>('');
+  const [selectedVrm, setSelectedVrm] = useState<string>(() => 
+    localStorage.getItem(STORAGE_KEYS.selectedVrm) || ''
+  );
 
   const voiceModels = ['Kore', 'Ava', 'Deep', 'Neutral'];
-  const [selectedVoice, setSelectedVoice] = useState<string>(voiceModels[0]);
+  const [selectedVoice, setSelectedVoice] = useState<string>(() => 
+    localStorage.getItem(STORAGE_KEYS.selectedVoice) || voiceModels[0]
+  );
 
   const personalities = [
     { id: 'default', label: 'Default', instruction: null },
     { id: 'witty', label: 'Witty', instruction: "You are Aura: witty, playful, concise." },
     { id: 'calm', label: 'Calm', instruction: "You are Aura: calm, measured, empathetic." }
   ];
-  const [selectedPersonality, setSelectedPersonality] = useState<string>('default');
-  const [selectedMode, setSelectedMode] = useState<'ACTIVE' | 'PASSIVE'>('ACTIVE');
+  const [selectedPersonality, setSelectedPersonality] = useState<string>(() => 
+    localStorage.getItem(STORAGE_KEYS.selectedPersonality) || 'default'
+  );
+  const [selectedMode, setSelectedMode] = useState<'ACTIVE' | 'PASSIVE'>(() => 
+    (localStorage.getItem(STORAGE_KEYS.selectedMode) as 'ACTIVE' | 'PASSIVE') || 'ACTIVE'
+  );
 
   const liveVolumeRef = useRef<number>(0);
   const liveMicVolumeRef = useRef<number>(0);
+
+  // Save preferences to localStorage when they change
+  useEffect(() => { if (selectedVrm) localStorage.setItem(STORAGE_KEYS.selectedVrm, selectedVrm); }, [selectedVrm]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.selectedVoice, selectedVoice); }, [selectedVoice]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.selectedPersonality, selectedPersonality); }, [selectedPersonality]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEYS.selectedMode, selectedMode); }, [selectedMode]);
 
   // Load available VRM models on mount
   useEffect(() => {
@@ -40,12 +62,17 @@ const App: React.FC = () => {
       .then((models: string[]) => {
         if (models.length > 0) {
           setAvailableVrms(models);
-          setSelectedVrm(models[0]);
+          // Use saved preference if valid, otherwise first model
+          const saved = localStorage.getItem(STORAGE_KEYS.selectedVrm);
+          if (saved && models.includes(saved)) {
+            setSelectedVrm(saved);
+          } else {
+            setSelectedVrm(models[0]);
+          }
         }
       })
       .catch(err => {
         console.error('Failed to load VRM models:', err);
-        // Fallback to a default if API fails
         setAvailableVrms(['AvatarSample_D.vrm']);
         setSelectedVrm('AvatarSample_D.vrm');
       });
@@ -93,6 +120,30 @@ const App: React.FC = () => {
       liveManagerRef.current.setVrmExpressions(vrmExpressions);
     }
   }, [vrmExpressions]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        if (connectionState === ConnectionState.CONNECTED) {
+          handleDisconnect();
+        } else if (connectionState === ConnectionState.DISCONNECTED) {
+          handleConnect();
+        }
+      }
+      
+      if (e.code === 'Escape') {
+        setMenuOpen(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [connectionState]);
 
   const handleConnect = async () => {
     if (!liveManagerRef.current) return;
@@ -146,6 +197,7 @@ const App: React.FC = () => {
         {/* Top-right: Settings button */}
         <div className="absolute top-4 right-4 pointer-events-auto">
           <button 
+            type="button"
             onClick={() => setMenuOpen(!menuOpen)} 
             className="hud-panel w-9 h-9 flex items-center justify-center hover:bg-white/5 transition-colors"
             title="Settings"
@@ -226,6 +278,7 @@ const App: React.FC = () => {
               </div>
 
               <button 
+                type="button"
                 onClick={() => setMenuOpen(false)} 
                 className="mt-3 w-full py-1.5 text-[10px] tracking-widest text-cyan-400/60 hover:text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/40 rounded transition-colors"
               >
@@ -251,6 +304,7 @@ const App: React.FC = () => {
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-auto">
           {!isConnected ? (
             <button 
+              type="button"
               onClick={handleConnect}
               disabled={isConnecting}
               className="hud-button group"
@@ -265,6 +319,7 @@ const App: React.FC = () => {
             </button>
           ) : (
             <button 
+              type="button"
               onClick={handleDisconnect}
               className="hud-button-danger group"
             >
@@ -290,12 +345,11 @@ const App: React.FC = () => {
                 {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, i) => (
                   <div 
                     key={i}
-                    className={`w-1 rounded-sm transition-all duration-75 ${
+                    className={`w-1 rounded-sm transition-all duration-75 volume-bar-${i + 1} ${
                       micVolume >= threshold 
                         ? 'bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.6)]' 
                         : 'bg-green-900/40'
                     }`}
-                    style={{ height: `${(i + 1) * 3 + 4}px` }}
                     aria-hidden="true"
                   />
                 ))}
@@ -308,12 +362,11 @@ const App: React.FC = () => {
                 {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, i) => (
                   <div 
                     key={i}
-                    className={`w-1 rounded-sm transition-all duration-75 ${
+                    className={`w-1 rounded-sm transition-all duration-75 volume-bar-${i + 1} ${
                       volume >= threshold 
                         ? 'bg-cyan-400 shadow-[0_0_4px_rgba(34,211,238,0.6)]' 
                         : 'bg-cyan-900/40'
                     }`}
-                    style={{ height: `${(i + 1) * 3 + 4}px` }}
                     aria-hidden="true"
                   />
                 ))}
