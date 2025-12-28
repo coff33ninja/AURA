@@ -58,8 +58,9 @@ export class LiveManager {
         if (this.apiKeys.length === 0) {
             throw new Error("No Gemini API keys provided.");
         }
-        // Shuffle keys to distribute load if multiple instances are running
-        this.apiKeys.sort(() => Math.random() - 0.5);
+        // Start with a random key to distribute load across multiple instances
+        this.currentApiKeyIndex = Math.floor(Math.random() * this.apiKeys.length);
+        console.log(`[LiveManager] Starting with key index ${this.currentApiKeyIndex}`);
     }
 
     public async setVoiceModel(voiceName: string) {
@@ -334,10 +335,26 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
                             this.onStatusChange("Disconnected");
                             this.disconnect();
                         },
-                        onerror: (err) => {
+                        onerror: (err: any) => {
                             console.error("[LiveManager] ❌ Live API Error:", err);
-                            // This error might not be fatal for the connection attempt, 
-                            // but we'll disconnect and let the loop try the next key.
+                            const errorMsg = err?.message || err?.toString() || '';
+                            
+                            // Check for rate limit or quota errors - auto rotate to next key
+                            if (errorMsg.includes('429') || 
+                                errorMsg.includes('quota') || 
+                                errorMsg.includes('rate') ||
+                                errorMsg.includes('RESOURCE_EXHAUSTED')) {
+                                console.log('[LiveManager] Rate limit detected, rotating to next key...');
+                                this.currentApiKeyIndex = (this.currentApiKeyIndex + 1) % this.apiKeys.length;
+                                this.onStatusChange("Rate limited, switching key...");
+                                // Auto-reconnect with next key
+                                setTimeout(() => {
+                                    this.disconnect();
+                                    this.connect().catch(e => console.error('Auto-reconnect failed:', e));
+                                }, 1000);
+                                return;
+                            }
+                            
                             this.disconnect();
                         }
                     }
@@ -350,7 +367,17 @@ You are not a disembodied voice in a empty void. You are Aura—a living, breath
                 return; 
 
             } catch (error: any) {
-                console.error(`[LiveManager] ❌ Connection failed with key ${i + 1}:`, error?.message || error);
+                const errorMsg = error?.message || error?.toString() || '';
+                console.error(`[LiveManager] ❌ Connection failed with key ${i + 1}:`, errorMsg);
+                
+                // Check if it's a rate limit error
+                if (errorMsg.includes('429') || 
+                    errorMsg.includes('quota') || 
+                    errorMsg.includes('rate') ||
+                    errorMsg.includes('RESOURCE_EXHAUSTED')) {
+                    console.log(`[LiveManager] Key ${i + 1} rate limited, trying next...`);
+                }
+                
                 connectionError = error;
                 // The sessionPromise might have been rejected, clean up before next attempt
                 this.disconnect(); 
