@@ -1,14 +1,35 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRM, VRMHumanBoneName, VRMUtils } from '@pixiv/three-vrm';
 import type { VrmCommand } from '../services/liveManager';
 import { VrmConfig, getVrmConfig, saveVrmConfigToStorage, DEFAULT_VRM_CONFIG } from '../types/vrmConfig';
+import { 
+  loadModelBehaviors, 
+  getCurrentBehaviors, 
+  onBehaviorChanged 
+} from '../services/behaviorManager';
+import type { 
+  ModelBehaviors,
+  GestureDefinition, 
+  ReactionDefinition,
+  IdleConfig,
+  LipSyncConfig,
+  TransformConfig 
+} from '../types/behaviorTypes';
 
 export interface PoseSettings {
   rotation: number; // Y rotation in degrees (0-360)
   leftArmZ: number; // Left arm Z rotation (-90 to 90)
   rightArmZ: number; // Right arm Z rotation (-90 to 90)
+}
+
+// Preview API exposed via ref
+export interface NeuralCoreHandle {
+  previewGesture: (gestureName: string, duration?: number) => void;
+  previewExpression: (expressionName: string, value: number) => void;
+  previewReaction: (reactionName: string) => void;
+  resetExpressions: () => void;
 }
 
 interface NeuralCoreProps {
@@ -21,7 +42,7 @@ interface NeuralCoreProps {
   onConfigLoaded?: (config: VrmConfig) => void; // Callback when config is loaded
 }
 
-export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCommand, vrmModel, onVrmExpressionsLoaded, poseSettings, onConfigLoaded }) => {
+export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volume, isActive, vrmCommand, vrmModel, onVrmExpressionsLoaded, poseSettings, onConfigLoaded }, ref) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -29,6 +50,11 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
   const vrmRef = useRef<VRM | null>(null);
   const clockRef = useRef<THREE.Clock>(new THREE.Clock());
   const vrmConfigRef = useRef<VrmConfig>(DEFAULT_VRM_CONFIG);
+  
+  // Behavior system refs - loaded from BehaviorManager
+  const behaviorsRef = useRef<ModelBehaviors | null>(null);
+  const gesturesMapRef = useRef<Map<string, GestureDefinition>>(new Map());
+  const reactionsMapRef = useRef<Map<string, ReactionDefinition>>(new Map());
 
   // Scenery Refs
   const particlesRef = useRef<THREE.Points | null>(null);
@@ -154,181 +180,43 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
     }
   };
 
-  // Hand gesture definitions - skeletal bone rotations
-  const defineGesture = (name: string, getRotations: () => Record<string, { x: number; y: number; z: number }>) => {
-    return { name, getRotations };
-  };
-
-  const gestures = [
-    // Single-hand gestures
-    defineGesture('thumbs_up', () => ({
-      rightHand: { x: 0, y: 0, z: Math.PI / 3 },
-      rightLowerArm: { x: 0, y: 0, z: -Math.PI / 6 }
-    })),
-    defineGesture('thumbs_down', () => ({
-      rightHand: { x: 0, y: 0, z: -Math.PI / 3 },
-      rightLowerArm: { x: 0, y: 0, z: -Math.PI / 6 }
-    })),
-    defineGesture('wave', () => ({
-      rightUpperArm: { x: 0, y: 0, z: -Math.PI / 4 },
-      rightLowerArm: { x: Math.sin(Date.now() * 0.003) * 0.5, y: 0, z: -Math.PI / 2 }
-    })),
-    defineGesture('point', () => ({
-      rightUpperArm: { x: -Math.PI / 6, y: Math.PI / 4, z: 0 },
-      rightLowerArm: { x: 0, y: 0, z: -Math.PI / 3 }
-    })),
-    defineGesture('point_left', () => ({
-      leftUpperArm: { x: -Math.PI / 6, y: -Math.PI / 4, z: 0 },
-      leftLowerArm: { x: 0, y: 0, z: Math.PI / 3 }
-    })),
-    defineGesture('peace_sign', () => ({
-      rightHand: { x: 0, y: 0, z: Math.PI / 6 },
-      rightLowerArm: { x: 0, y: 0, z: -Math.PI / 2 }
-    })),
-    defineGesture('ok_sign', () => ({
-      rightHand: { x: 0, y: Math.PI / 4, z: 0 },
-      rightLowerArm: { x: 0, y: 0, z: -Math.PI / 3 }
-    })),
-    defineGesture('fist', () => ({
-      rightHand: { x: Math.PI / 2, y: 0, z: 0 }
-    })),
-    defineGesture('open_hand', () => ({
-      rightHand: { x: 0, y: 0, z: 0 }
-    })),
-    defineGesture('prayer', () => ({
-      rightHand: { x: 0, y: 0, z: 0 },
-      leftHand: { x: 0, y: 0, z: 0 },
-      rightLowerArm: { x: Math.PI / 4, y: 0, z: 0 },
-      leftLowerArm: { x: Math.PI / 4, y: 0, z: 0 }
-    })),
-    // Dual-hand gestures
-    defineGesture('applause', () => ({
-      rightLowerArm: { x: Math.PI / 3, y: 0, z: 0 },
-      leftLowerArm: { x: Math.PI / 3, y: 0, z: 0 },
-      rightHand: { x: Math.sin(Date.now() * 0.005) * 0.3, y: 0, z: 0 },
-      leftHand: { x: Math.sin(Date.now() * 0.005 + Math.PI) * 0.3, y: 0, z: 0 }
-    })),
-    defineGesture('shrug', () => ({
-      rightUpperArm: { x: 0, y: 0, z: -Math.PI / 6 },
-      leftUpperArm: { x: 0, y: 0, z: Math.PI / 6 },
-      rightLowerArm: { x: 0, y: 0, z: -Math.PI / 4 },
-      leftLowerArm: { x: 0, y: 0, z: Math.PI / 4 }
-    })),
-    defineGesture('hands_up', () => ({
-      rightUpperArm: { x: -Math.PI / 2, y: 0, z: 0 },
-      leftUpperArm: { x: -Math.PI / 2, y: 0, z: 0 },
-      rightLowerArm: { x: 0, y: 0, z: 0 },
-      leftLowerArm: { x: 0, y: 0, z: 0 }
-    })),
-    defineGesture('hands_together', () => ({
-      rightHand: { x: 0, y: Math.PI / 6, z: -Math.PI / 4 },
-      leftHand: { x: 0, y: -Math.PI / 6, z: Math.PI / 4 },
-      rightLowerArm: { x: Math.PI / 6, y: 0, z: 0 },
-      leftLowerArm: { x: Math.PI / 6, y: 0, z: 0 }
-    })),
-    // Additional gestures for emotion choreography
-    defineGesture('dismissive_wave', () => ({
-      rightUpperArm: { x: 0, y: 0, z: -Math.PI / 5 },
-      rightLowerArm: { x: 0, y: Math.PI / 4, z: -Math.PI / 4 },
-      rightHand: { x: Math.sin(Date.now() * 0.004) * 0.3, y: 0, z: 0 }
-    })),
-    defineGesture('chin_rest', () => ({
-      rightUpperArm: { x: Math.PI / 6, y: 0, z: 0 },
-      rightLowerArm: { x: Math.PI / 2, y: 0, z: 0 },
-      rightHand: { x: -Math.PI / 6, y: 0, z: 0 }
-    })),
-    defineGesture('arms_crossed', () => ({
-      rightUpperArm: { x: Math.PI / 4, y: 0, z: 0 },
-      leftUpperArm: { x: Math.PI / 4, y: 0, z: 0 },
-      rightLowerArm: { x: Math.PI / 2, y: 0, z: Math.PI / 6 },
-      leftLowerArm: { x: Math.PI / 2, y: 0, z: -Math.PI / 6 }
-    })),
-    defineGesture('hand_on_hip', () => ({
-      rightUpperArm: { x: 0, y: 0, z: -Math.PI / 6 },
-      rightLowerArm: { x: Math.PI / 3, y: 0, z: 0 }
-    })),
-    defineGesture('thinking', () => ({
-      rightUpperArm: { x: Math.PI / 6, y: 0, z: 0 },
-      rightLowerArm: { x: Math.PI / 2.5, y: 0, z: 0 },
-      rightHand: { x: 0, y: Math.PI / 8, z: 0 }
-    }))
-  ];
-
-  // Emotion choreography: each emotion triggers a coordinated sequence of commands
-  const emotionChoreography: Record<string, { expressions: Array<{name: string, value: number}>, posture: string, gestures: string[], lookat?: {x: number, y: number, z: number}, idle: string, mode: 'ACTIVE' | 'PASSIVE' }> = {
-    offended: {
-      expressions: [{ name: 'angry', value: 0.8 }, { name: 'sorrow', value: 0.4 }],
-      posture: 'defensive',
-      gestures: ['dismissive_wave'],
-      lookat: { x: -0.5, y: 0.1, z: 0 }, // look away
-      idle: 'head_tilt',
-      mode: 'PASSIVE'
-    },
-    embarrassed: {
-      expressions: [{ name: 'blink', value: 1.0 }, { name: 'sorrow', value: 0.6 }],
-      posture: 'anxious',
-      gestures: ['prayer'],
-      lookat: { x: 0, y: -0.8, z: 0 }, // look down
-      idle: 'sway',
-      mode: 'PASSIVE'
-    },
-    angry: {
-      expressions: [{ name: 'angry', value: 1.0 }],
-      posture: 'confident',
-      gestures: ['fist'],
-      lookat: { x: 0, y: 0, z: 0 }, // direct stare
-      idle: 'head_tilt',
-      mode: 'ACTIVE'
-    },
-    confused: {
-      expressions: [{ name: 'a', value: 0.5 }], // open mouth confusion
-      posture: 'thoughtful',
-      gestures: ['thinking'],
-      lookat: { x: 0.3, y: 0.2, z: 0 }, // look uncertain
-      idle: 'head_tilt',
-      mode: 'PASSIVE'
-    },
-    delighted: {
-      expressions: [{ name: 'joy', value: 1.0 }, { name: 'fun', value: 0.8 }],
-      posture: 'joy',
-      gestures: ['hands_up'],
-      lookat: { x: 0, y: 0.3, z: 0 }, // look up happily
-      idle: 'sway',
-      mode: 'ACTIVE'
-    },
-    contemplative: {
-      expressions: [{ name: 'a', value: 0.3 }], // neutral thinking
-      posture: 'thoughtful',
-      gestures: ['chin_rest'],
-      lookat: { x: -0.2, y: -0.3, z: 0 }, // look down thoughtfully
-      idle: 'sway',
-      mode: 'PASSIVE'
-    },
-    defensive: {
-      expressions: [{ name: 'angry', value: 0.6 }, { name: 'sorrow', value: 0.5 }],
-      posture: 'anxious',
-      gestures: ['arms_crossed'],
-      lookat: { x: -0.3, y: 0, z: 0 }, // avoid eye contact
-      idle: 'head_tilt',
-      mode: 'PASSIVE'
-    },
-    sarcastic: {
-      expressions: [{ name: 'fun', value: 0.9 }, { name: 'o', value: 0.4 }], // smirk
-      posture: 'confident',
-      gestures: ['hand_on_hip'],
-      lookat: { x: 0.2, y: -0.2, z: 0 }, // smug glance
-      idle: 'head_tilt',
-      mode: 'ACTIVE'
-    },
-    excited: {
-      expressions: [{ name: 'joy', value: 1.0 }, { name: 'fun', value: 1.0 }],
-      posture: 'engaged',
-      gestures: ['applause'],
-      lookat: { x: 0, y: 0.4, z: 0 }, // look up excitedly
-      idle: 'sway',
-      mode: 'ACTIVE'
+  // Hand gesture definitions - now loaded from BehaviorManager
+  // Helper to get gesture rotations from loaded config
+  const getGestureRotations = useCallback((gestureName: string): Record<string, { x: number; y: number; z: number }> | null => {
+    const gesture = gesturesMapRef.current.get(gestureName);
+    if (!gesture || !gesture.enabled) return null;
+    
+    // For dynamic gestures (wave, applause), apply time-based animation
+    const bones = { ...gesture.bones };
+    const now = Date.now();
+    
+    // Apply dynamic animations for specific gestures
+    if (gestureName === 'wave' && bones.rightLowerArm) {
+      bones.rightLowerArm = {
+        ...bones.rightLowerArm,
+        x: Math.sin(now * 0.003) * 0.5
+      };
+    } else if (gestureName === 'applause') {
+      if (bones.rightHand) {
+        bones.rightHand = { ...bones.rightHand, x: Math.sin(now * 0.005) * 0.3 };
+      }
+      if (bones.leftHand) {
+        bones.leftHand = { ...bones.leftHand, x: Math.sin(now * 0.005 + Math.PI) * 0.3 };
+      }
+    } else if (gestureName === 'dismissive_wave' && bones.rightHand) {
+      bones.rightHand = { ...bones.rightHand, x: Math.sin(now * 0.004) * 0.3 };
     }
-  };
+    
+    return bones;
+  }, []);
+
+  // Emotion choreography - now loaded from BehaviorManager
+  // Helper to get reaction definition from loaded config
+  const getReaction = useCallback((emotionState: string): ReactionDefinition | null => {
+    const reaction = reactionsMapRef.current.get(emotionState);
+    if (!reaction || !reaction.enabled) return null;
+    return reaction;
+  }, []);
 
   const setExpressionValue = (expressionName: string, value: number) => {
     if (!vrmRef.current) return;
@@ -348,10 +236,10 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
     }
   };
 
-  const triggerEmotion = (emotionState: string) => {
-    const emotion = emotionChoreography[emotionState];
+  const triggerEmotion = useCallback((emotionState: string) => {
+    const emotion = getReaction(emotionState);
     if (!emotion) {
-      console.warn('Emotion not found:', emotionState);
+      console.warn('Emotion not found or disabled:', emotionState);
       return;
     }
 
@@ -364,54 +252,58 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
     
     // Perform primary gesture
     if (emotion.gestures.length > 0) {
-      emotion.gestures.forEach(gest => playGesture(gest, 1.5));
+      emotion.gestures.forEach(gest => playGesture(gest, emotion.duration || 1.5));
     }
     
     // Update look direction if specified
-    if (emotion.lookat) {
-      setLookAtTarget(emotion.lookat.x, emotion.lookat.y, emotion.lookat.z);
+    if (emotion.lookAt) {
+      setLookAtTarget(emotion.lookAt.x, emotion.lookAt.y, emotion.lookAt.z);
     }
     
-    // Set idle gesture
-    playIdleGesture(emotion.idle);
+    // Set idle gesture based on posture
+    const idleGesture = emotion.posture === 'thoughtful' || emotion.posture === 'anxious' ? 'head_tilt' : 'sway';
+    playIdleGesture(idleGesture);
     
     // Switch interaction mode
     setAiMode(emotion.mode);
-  };
+  }, [getReaction]);
 
-  const playGesture = (gestureName: string, duration: number = 1.5) => {
-    const gesture = gestures.find(g => g.name === gestureName);
-    if (!gesture || !vrmRef.current) {
-      console.warn('Gesture not found:', gestureName);
+  const playGesture = useCallback((gestureName: string, duration: number = 1.5) => {
+    const rotations = getGestureRotations(gestureName);
+    if (!rotations || !vrmRef.current) {
+      console.warn('Gesture not found or disabled:', gestureName);
       return;
     }
     
+    // Get gesture config for duration/intensity
+    const gesture = gesturesMapRef.current.get(gestureName);
+    const actualDuration = gesture?.duration ?? duration;
+    
     // Queue the gesture
-    gestureQueue.current.push({ name: gestureName, duration });
+    gestureQueue.current.push({ name: gestureName, duration: actualDuration });
     
     // If no gesture is currently playing, start this one immediately
     if (!gestureStateRef.current.active) {
       playNextGesture();
     }
-  };
+  }, [getGestureRotations]);
 
-  const playNextGesture = () => {
+  const playNextGesture = useCallback(() => {
     if (gestureQueue.current.length === 0) {
       gestureStateRef.current = { active: false, elapsed: 0, duration: 0, currentGesture: null };
       return;
     }
     
     const { name, duration } = gestureQueue.current.shift()!;
-    const gesture = gestures.find(g => g.name === name);
-    if (!gesture) return;
+    const rotations = getGestureRotations(name);
+    if (!rotations) return;
     
-    const rotations = gesture.getRotations();
     for (const [boneName, rot] of Object.entries(rotations)) {
       boneTargets.current[boneName] = rot;
     }
     
     gestureStateRef.current = { active: true, elapsed: 0, duration, currentGesture: name };
-  };
+  }, [getGestureRotations]);
 
   // Idle gesture support with state management
   const playIdleGesture = (gestureName: string) => {
@@ -554,6 +446,27 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
     actionRef.current = action;
   };
 
+  // Expose preview API via ref for BehaviorEditor
+  useImperativeHandle(ref, () => ({
+    previewGesture: (gestureName: string, duration: number = 1.5) => {
+      playGesture(gestureName, duration);
+    },
+    previewExpression: (expressionName: string, value: number) => {
+      setExpressionValue(expressionName, value);
+    },
+    previewReaction: (reactionName: string) => {
+      triggerEmotion(reactionName);
+    },
+    resetExpressions: () => {
+      // Clear all persistent expressions
+      expressionPersist.current = {};
+      // Reset all expression targets
+      for (const name of Object.keys(expressionTargetsActual.current)) {
+        expressionTargetsActual.current[name] = 0;
+      }
+    }
+  }), [playGesture, triggerEmotion]);
+
   useEffect(() => {
     if (!mountRef.current) return;
 
@@ -682,6 +595,53 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
       vrmConfigRef.current = config;
       console.log('[NeuralCore] Loaded config for', modelBaseName, config);
       onConfigLoaded?.(config);
+    });
+    
+    // Load behaviors from BehaviorManager
+    loadModelBehaviors(modelBaseName).then(behaviors => {
+      behaviorsRef.current = behaviors;
+      
+      // Build gesture lookup map
+      gesturesMapRef.current.clear();
+      for (const gesture of behaviors.gestures.gestures) {
+        gesturesMapRef.current.set(gesture.name, gesture);
+      }
+      
+      // Build reactions lookup map
+      reactionsMapRef.current.clear();
+      for (const reaction of behaviors.reactions.reactions) {
+        reactionsMapRef.current.set(reaction.name, reaction);
+      }
+      
+      console.log('[NeuralCore] Loaded behaviors for', modelBaseName, {
+        gestures: gesturesMapRef.current.size,
+        reactions: reactionsMapRef.current.size
+      });
+    }).catch(err => {
+      console.warn('[NeuralCore] Failed to load behaviors:', err);
+    });
+    
+    // Listen for behavior changes from BehaviorEditor
+    const unsubscribe = onBehaviorChanged((type, config) => {
+      const behaviors = getCurrentBehaviors();
+      if (!behaviors) return;
+      
+      behaviorsRef.current = behaviors;
+      
+      // Rebuild maps if gestures or reactions changed
+      if (type === 'gestures') {
+        gesturesMapRef.current.clear();
+        for (const gesture of behaviors.gestures.gestures) {
+          gesturesMapRef.current.set(gesture.name, gesture);
+        }
+      } else if (type === 'reactions') {
+        reactionsMapRef.current.clear();
+        for (const reaction of behaviors.reactions.reactions) {
+          reactionsMapRef.current.set(reaction.name, reaction);
+        }
+      }
+      
+      console.log('[NeuralCore] Behavior updated:', type);
     });
     
     loader.load(
@@ -880,10 +840,11 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
             const sVol = smoothedVolume.current;
             
             // 1. Enhanced Audio-Driven Lip Sync + Phonemes
-            // Use config settings for sensitivity and viseme weights
-            const config = vrmConfigRef.current;
-            const lipSyncSensitivity = config.lipSync?.sensitivity ?? 4.0;
-            const visemeWeights = config.lipSync?.visemeWeights ?? { a: 0.8, i: 0.3, u: 0.25, e: 0.3, o: 0.6 };
+            // Use behavior config settings for sensitivity and viseme weights
+            const behaviors = behaviorsRef.current;
+            const lipsyncConfig = behaviors?.lipsync;
+            const lipSyncSensitivity = lipsyncConfig?.sensitivity ?? 4.0;
+            const visemeWeights = lipsyncConfig?.visemeWeights ?? { a: 0.8, i: 0.3, u: 0.25, e: 0.3, o: 0.6 };
             
             const mouthOpen = Math.min(1.0, sVol * lipSyncSensitivity);
             addExpressionTarget('a', mouthOpen * visemeWeights.a);
@@ -893,21 +854,27 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
             addExpressionTarget('o', mouthOpen * visemeWeights.o);
 
             // 2. Breathing Animation (subtle chest movement via spine bones, not expressions)
-            const idleConfig = config.idle ?? { breathingSpeed: 0.8, breathingIntensity: 0.02, blinkInterval: 4.0, blinkDuration: 0.15, swayAmount: 0.1 };
+            // Use behavior idle config
+            const idleConfig = behaviors?.idle;
+            const breathingSpeed = idleConfig?.breathing?.enabled !== false ? (idleConfig?.breathing?.speed ?? 0.8) : 0;
+            const breathingIntensity = idleConfig?.breathing?.intensity ?? 0.02;
             breathingTime.current += delta;
-            breathingPhase.current = Math.sin(breathingTime.current * idleConfig.breathingSpeed) * 0.5 + 0.5; // 0 to 1
+            breathingPhase.current = Math.sin(breathingTime.current * breathingSpeed) * 0.5 + 0.5; // 0 to 1
             // Breathing is handled via spine bone rotation in the bone update section below
 
             // 3. Blinking (with interruption support)
-            if (blinkAllowedRef.current) {
+            const blinkEnabled = idleConfig?.blinking?.enabled !== false;
+            const blinkInterval = idleConfig?.blinking?.interval ?? 4.0;
+            const blinkDuration = idleConfig?.blinking?.duration ?? 0.15;
+            if (blinkAllowedRef.current && blinkEnabled) {
               blinkTimer.current += delta;
               if (blinkTimer.current >= nextBlinkTime.current) {
                 blinkTimer.current = 0;
-                nextBlinkTime.current = Math.random() * idleConfig.blinkInterval + 2;
+                nextBlinkTime.current = Math.random() * blinkInterval + 2;
               }
               const blinkPhase = blinkTimer.current;
               let blinkValue = 0;
-              const blinkDur = idleConfig.blinkDuration;
+              const blinkDur = blinkDuration;
               if (blinkPhase < blinkDur) blinkValue = blinkPhase / blinkDur;
               else if (blinkPhase < blinkDur * 2) blinkValue = 1 - (blinkPhase - blinkDur) / blinkDur;
               addExpressionTarget('blink', Math.max(0, blinkValue));
@@ -928,10 +895,17 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
             }
 
             // 6. Handle Idle Gestures (continuous subtle movements)
+            // Use behavior idle config for sway
+            const swayEnabled = idleConfig?.sway?.enabled !== false;
+            const swayAmount = idleConfig?.sway?.amount ?? 0.1;
+            const swaySpeed = idleConfig?.sway?.speed ?? 0.6;
+            const headMovementEnabled = idleConfig?.headMovement?.enabled !== false;
+            const headMovementAmount = idleConfig?.headMovement?.amount ?? 0.1;
+            
             const currentIdleGesture = idleGesturesRef.current[Math.floor(elapsedTime * 0.5) % idleGesturesRef.current.length];
             if (currentIdleGesture && isActive && sVol < 0.3) {
-              if (currentIdleGesture === 'head_tilt') {
-                const tilt = Math.sin(elapsedTime * 0.8) * 0.15;
+              if (currentIdleGesture === 'head_tilt' && headMovementEnabled) {
+                const tilt = Math.sin(elapsedTime * 0.8) * headMovementAmount * 1.5;
                 boneTargets.current['head'] = { x: 0, y: tilt, z: 0 };
               } else if (currentIdleGesture === 'shoulder_shrug') {
                 const shrug = Math.sin(elapsedTime * 1.2) * 0.08;
@@ -940,24 +914,24 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
               } else if (currentIdleGesture === 'hand_wave') {
                 const wave = Math.sin(elapsedTime * 3) * 0.3;
                 boneTargets.current['rightHand'] = { x: 0, y: wave, z: 0 };
-              } else if (currentIdleGesture === 'sway') {
-                const swayAmount = Math.sin(elapsedTime * 0.6) * 0.1;
-                boneTargets.current['spine'] = { x: 0, y: swayAmount, z: 0 };
+              } else if (currentIdleGesture === 'sway' && swayEnabled) {
+                const sway = Math.sin(elapsedTime * swaySpeed) * swayAmount;
+                boneTargets.current['spine'] = { x: 0, y: sway, z: 0 };
               }
             }
 
             // 7. Head Movement + Eye Gaze + Camera Tracking
             const head = vrm.humanoid.getNormalizedBoneNode('head');
             if (head) {
-                // natural sway (base idle movement)
-                const swayY = Math.sin(elapsedTime * 0.5) * 0.1;
-                const swayZ = Math.cos(elapsedTime * 0.3) * 0.05;
+                // natural sway (base idle movement) - use config values
+                const headSwayY = headMovementEnabled ? Math.sin(elapsedTime * 0.5) * headMovementAmount : 0;
+                const headSwayZ = headMovementEnabled ? Math.cos(elapsedTime * 0.3) * (headMovementAmount * 0.5) : 0;
                 // reactive nod
                 const nod = (isActive && sVol > 0.1) ? Math.sin(elapsedTime * 10) * 0.02 * sVol : 0;
 
                 // apply base pose
-                head.rotation.y = swayY;
-                head.rotation.z = swayZ;
+                head.rotation.y = headSwayY;
+                head.rotation.z = headSwayZ;
                 head.rotation.x = nod;
 
                 // Blend in camera tracking for eye contact
@@ -1106,6 +1080,9 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         cancelAnimationFrame(animationId);
         window.removeEventListener('resize', handleResize);
         
+        // Clean up behavior change listener
+        unsubscribe();
+        
         // Clean up mixer
         if (mixerRef.current) {
           mixerRef.current.stopAllAction();
@@ -1247,4 +1224,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ volume, isActive, vrmCom
         )}
     </div>
   );
-};
+});
+
+// Display name for debugging
+NeuralCore.displayName = 'NeuralCore';
