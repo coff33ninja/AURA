@@ -339,9 +339,20 @@ RULES:
 - Speak naturally and conversationally
 ${this.personalityInstruction ? `\nPERSONALITY: ${this.personalityInstruction}` : ''}`;
 
-        // Add conversation history if available
+        // Add conversation history if available (limit to prevent overly long instructions)
         if (conversationHistory) {
-          systemInstruction += `\n\nPREVIOUS CONTEXT:\n${conversationHistory}`;
+          const maxHistoryLength = 2000; // Limit history to prevent issues
+          const truncatedHistory = conversationHistory.length > maxHistoryLength 
+            ? conversationHistory.substring(0, maxHistoryLength) + '...[truncated]'
+            : conversationHistory;
+          systemInstruction += `\n\nPREVIOUS CONTEXT:\n${truncatedHistory}`;
+        }
+
+        // Ensure system instruction isn't too long (Gemini has limits)
+        const maxInstructionLength = 8000;
+        if (systemInstruction.length > maxInstructionLength) {
+          console.warn(`[LiveManager] System instruction too long (${systemInstruction.length}), truncating to ${maxInstructionLength}`);
+          systemInstruction = systemInstruction.substring(0, maxInstructionLength);
         }
 
         console.log("[LiveManager] Config:", {
@@ -350,6 +361,12 @@ ${this.personalityInstruction ? `\nPERSONALITY: ${this.personalityInstruction}` 
           systemInstructionLength: systemInstruction.length,
           hasConversationHistory: !!conversationHistory,
         });
+        console.log("[LiveManager] System instruction preview:", systemInstruction.substring(0, 500) + "...");
+
+        // Verify model name is correct before connecting
+        if (!this.modelName.includes('12-2025')) {
+          console.warn("[LiveManager] ⚠️ Model name may be outdated:", this.modelName);
+        }
 
         this.sessionPromise = this.client.live.connect({
           model: this.modelName,
