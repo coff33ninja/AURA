@@ -46,7 +46,7 @@
 
 ### Features
 - [ ] Add text chat fallback when mic unavailable
-- [ ] Display AI response text (with commands stripped) as subtitles
+- [x] Display AI response text (with commands stripped) as subtitles
 - [ ] Add screenshot/recording functionality
 - [ ] Support custom VRM upload
 - [ ] Add background scene options (solid color, gradient, environment maps)

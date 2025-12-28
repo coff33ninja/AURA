@@ -49,6 +49,7 @@ export class LiveManager {
     public onVolumeChange: (vol: number) => void = () => {};
     public onMicVolumeChange: (vol: number) => void = () => {}; // User's mic level
     public onStatusChange: (status: string) => void = () => {};
+    public onTextReceived: (text: string) => void = () => {}; // AI response text (commands stripped)
     public onClose: () => void = () => {};
 
     constructor(apiKeysCsv: string) {
@@ -286,8 +287,13 @@ export class LiveManager {
                                 } catch (e) {
                                     console.warn('Failed to parse VRM commands from AI text:', e);
                                 }
-                                // If you want to show the AI's text in the UI (excluding commands), you'd pass it here.
-                                // For now, we are assuming text is for speech and not direct UI display here.
+                                
+                                // Strip commands from text and emit for subtitles
+                                const commandPattern = /\[(?:COMMAND|EMOTION):[^\]]+\]/g;
+                                const cleanText = textContent.replace(commandPattern, '').trim();
+                                if (cleanText) {
+                                    this.onTextReceived(cleanText);
+                                }
                             }
 
                             const audioData = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;

@@ -19,6 +19,8 @@ const App: React.FC = () => {
   const [vrmCommand, setVrmCommand] = useState<VrmCommand | null>(null);
   const [vrmExpressions, setVrmExpressions] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [subtitleText, setSubtitleText] = useState<string>('');
+  const subtitleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const liveManagerRef = useRef<LiveManager | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -91,6 +93,12 @@ const App: React.FC = () => {
     mgr.onVolumeChange = (vol) => { liveVolumeRef.current = vol; };
     mgr.onMicVolumeChange = (vol) => { liveMicVolumeRef.current = vol; };
     mgr.onVrmCommand = (command) => setVrmCommand(command);
+    mgr.onTextReceived = (text) => {
+      setSubtitleText(prev => prev + ' ' + text);
+      // Clear subtitle after 5 seconds of no new text
+      if (subtitleTimeoutRef.current) clearTimeout(subtitleTimeoutRef.current);
+      subtitleTimeoutRef.current = setTimeout(() => setSubtitleText(''), 5000);
+    };
     mgr.onClose = () => setConnectionState(ConnectionState.DISCONNECTED);
 
     liveManagerRef.current = mgr;
@@ -348,6 +356,17 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Subtitles - AI response text */}
+        {subtitleText && isConnected && (
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 max-w-2xl w-full px-4">
+            <div className="hud-panel px-4 py-2 text-center">
+              <p className="text-cyan-100/90 text-sm leading-relaxed">
+                {subtitleText.trim().slice(-200)}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Bottom-center: Connect button */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-auto">
