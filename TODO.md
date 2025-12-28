@@ -45,7 +45,7 @@
 ## 🟢 Low Priority / Nice to Have
 
 ### Features
-- [ ] Add text chat fallback when mic unavailable
+- [x] Add text chat fallback when mic unavailable
 - [x] Display AI response text (with commands stripped) as subtitles
 - [ ] Add screenshot/recording functionality
 - [ ] Support custom VRM upload

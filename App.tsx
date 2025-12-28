@@ -49,9 +49,12 @@ const App: React.FC = () => {
     (localStorage.getItem(STORAGE_KEYS.selectedMode) as 'ACTIVE' | 'PASSIVE') || 'ACTIVE'
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [textChatEnabled, setTextChatEnabled] = useState(false);
+  const [chatInput, setChatInput] = useState('');
 
   const liveVolumeRef = useRef<number>(0);
   const liveMicVolumeRef = useRef<number>(0);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   // Save preferences to localStorage when they change
   useEffect(() => { if (selectedVrm) localStorage.setItem(STORAGE_KEYS.selectedVrm, selectedVrm); }, [selectedVrm]);
@@ -199,6 +202,12 @@ const App: React.FC = () => {
     if (liveManagerRef.current) liveManagerRef.current.disconnect();
   };
 
+  const handleSendText = () => {
+    if (!chatInput.trim() || !liveManagerRef.current || !isConnected) return;
+    liveManagerRef.current.sendText(chatInput.trim());
+    setChatInput('');
+  };
+
   const isConnected = connectionState === ConnectionState.CONNECTED;
   const isConnecting = connectionState === ConnectionState.CONNECTING;
 
@@ -221,6 +230,55 @@ const App: React.FC = () => {
       {/* HUD Overlay Layer */}
       <div className="absolute inset-0 z-10 pointer-events-none">
         
+        {/* Left side: Text Chat Panel */}
+        {textChatEnabled && (
+          <div className="absolute left-4 top-16 bottom-24 w-72 pointer-events-auto flex flex-col">
+            <div className="hud-panel flex-1 flex flex-col overflow-hidden">
+              {/* Chat header */}
+              <div className="px-3 py-2 border-b border-cyan-500/20">
+                <span className="font-display text-[10px] tracking-[0.15em] text-cyan-400/80">TEXT CHAT</span>
+              </div>
+              
+              {/* Messages area */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {subtitleText && (
+                  <div className="text-cyan-100/80 text-xs leading-relaxed">
+                    <span className="text-cyan-500/60 text-[10px]">AURA: </span>
+                    {subtitleText.trim()}
+                  </div>
+                )}
+                {!subtitleText && !isConnected && (
+                  <div className="text-cyan-500/40 text-xs text-center py-4">
+                    Connect to start chatting
+                  </div>
+                )}
+              </div>
+              
+              {/* Input area */}
+              <div className="p-2 border-t border-cyan-500/20">
+                <form onSubmit={(e) => { e.preventDefault(); handleSendText(); }} className="flex gap-2">
+                  <input
+                    ref={chatInputRef}
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder={isConnected ? "Type a message..." : "Not connected"}
+                    disabled={!isConnected}
+                    className="flex-1 bg-cyan-950/30 border border-cyan-500/20 rounded px-2 py-1.5 text-xs text-cyan-100 placeholder-cyan-500/30 focus:outline-none focus:border-cyan-500/40 disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!isConnected || !chatInput.trim()}
+                    className="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 rounded text-cyan-400 text-xs hover:bg-cyan-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Top-left: Status indicator */}
         <div className="absolute top-4 left-4 pointer-events-auto">
           <div className="hud-panel px-3 py-1.5 flex items-center gap-2">
@@ -331,6 +389,20 @@ const App: React.FC = () => {
                     <option value="ACTIVE">Active</option>
                     <option value="PASSIVE">Passive</option>
                   </select>
+                </SettingRow>
+
+                <SettingRow label="TEXT CHAT">
+                  <button
+                    type="button"
+                    onClick={() => setTextChatEnabled(!textChatEnabled)}
+                    className={`w-full py-1.5 text-[10px] tracking-widest border rounded transition-colors ${
+                      textChatEnabled 
+                        ? 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10' 
+                        : 'text-cyan-400/60 border-cyan-500/20 hover:border-cyan-500/40'
+                    }`}
+                  >
+                    {textChatEnabled ? 'ENABLED' : 'DISABLED'}
+                  </button>
                 </SettingRow>
               </div>
 

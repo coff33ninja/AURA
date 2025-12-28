@@ -96,6 +96,25 @@ export class LiveManager {
         console.log('[LiveManager] VRM expressions updated:', expressions.length, 'expressions');
     }
 
+    public async sendText(text: string) {
+        if (!this.sessionPromise) {
+            console.warn('[LiveManager] Cannot send text - not connected');
+            return;
+        }
+        
+        try {
+            const session = await this.sessionPromise;
+            // Send text as a client content turn
+            await session.sendClientContent({
+                turns: [{ role: 'user', parts: [{ text }] }],
+                turnComplete: true
+            });
+            console.log('[LiveManager] Sent text:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+        } catch (e) {
+            console.error('[LiveManager] Failed to send text:', e);
+        }
+    }
+
     private async reconnect() {
         if (this.isReconnecting) return;
         this.isReconnecting = true;
