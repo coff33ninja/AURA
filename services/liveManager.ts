@@ -44,6 +44,7 @@ export class LiveManager {
     private personalityInstruction: string | null = null;
     private availableExpressions: string[] = []; // dynamically set by app when VRM loads
     private isReconnecting: boolean = false;
+    private textOnlyMode: boolean = false;
     
     // Reconnection state
     private reconnectAttempts: number = 0;
@@ -95,6 +96,11 @@ export class LiveManager {
         // Don't reconnect for expression changes - they're only used in system instruction
         // which is set at connection time. User can reconnect manually if needed.
         console.log('[LiveManager] VRM expressions updated:', expressions.length, 'expressions');
+    }
+
+    public setTextOnlyMode(enabled: boolean) {
+        this.textOnlyMode = enabled;
+        console.log('[LiveManager] Text-only mode:', enabled ? 'enabled' : 'disabled');
     }
 
     public async sendText(text: string) {
@@ -193,8 +199,8 @@ export class LiveManager {
 
     async connect() {
         console.log('[LiveManager] Starting connection...');
-        console.log(`[LiveManager] Model: ${this.modelName}, Voice: ${this.voiceName}`);
-        this.onStatusChange("Initializing Audio...");
+        console.log(`[LiveManager] Model: ${this.modelName}, Voice: ${this.voiceName}, TextOnly: ${this.textOnlyMode}`);
+        this.onStatusChange(this.textOnlyMode ? "Connecting..." : "Initializing Audio...");
         
         // Enable auto-reconnect for this session
         this.shouldAutoReconnect = true;
@@ -206,39 +212,42 @@ export class LiveManager {
             this.reconnectTimeoutId = null;
         }
         
-        // 1. Setup Audio Contexts
-        this.inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        // Skip audio setup in text-only mode
+        if (!this.textOnlyMode) {
+            // 1. Setup Audio Contexts
+            this.inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-        // Resume contexts just in case (browsers policy)
-        await this.inputAudioContext.resume();
-        await this.outputAudioContext.resume();
-        console.log('[LiveManager] Audio contexts initialized');
+            // Resume contexts just in case (browsers policy)
+            await this.inputAudioContext.resume();
+            await this.outputAudioContext.resume();
+            console.log('[LiveManager] Audio contexts initialized');
 
-        // 2. Setup Output Graph (Gapless Playback + Visualization)
-        this.analyser = this.outputAudioContext.createAnalyser();
-        this.analyser.fftSize = 256;
-        this.analyser.smoothingTimeConstant = 0.5;
+            // 2. Setup Output Graph (Gapless Playback + Visualization)
+            this.analyser = this.outputAudioContext.createAnalyser();
+            this.analyser.fftSize = 256;
+            this.analyser.smoothingTimeConstant = 0.5;
 
-        this.gainNode = this.outputAudioContext.createGain();
-        this.gainNode.connect(this.analyser);
-        this.analyser.connect(this.outputAudioContext.destination);
+            this.gainNode = this.outputAudioContext.createGain();
+            this.gainNode.connect(this.analyser);
+            this.analyser.connect(this.outputAudioContext.destination);
 
-        this.visualizerActive = true;
-        this.startVisualizerLoop();
+            this.visualizerActive = true;
+            this.startVisualizerLoop();
 
-        // 3. Get Microphone Access
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            this.onStatusChange("Mic access requires HTTPS.");
-            throw new Error("Media Devices API not available. Please use an HTTPS connection.");
+            // 3. Get Microphone Access
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                this.onStatusChange("Mic access requires HTTPS.");
+                throw new Error("Media Devices API not available. Please use an HTTPS connection.");
+            }
+            console.log('[LiveManager] Requesting microphone access...');
+            this.lastMicStream = await navigator.mediaDevices.getUserMedia({ audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }});
+            console.log('[LiveManager] Microphone access granted');
         }
-        console.log('[LiveManager] Requesting microphone access...');
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-        }});
-        console.log('[LiveManager] Microphone access granted');
 
         this.onStatusChange("Connecting to Neural Core...");
 
@@ -275,20 +284,30 @@ export class LiveManager {
                     hasConversationHistory: !!conversationHistory
                 });
                 
+                // Configure response modalities based on mode
+                const responseModalities = this.textOnlyMode 
+                    ? [Modality.TEXT] 
+                    : [Modality.AUDIO];
+                
                 this.sessionPromise = this.client.live.connect({
                     model: this.modelName,
                     config: {
-                        responseModalities: [Modality.AUDIO],
+                        responseModalities: responseModalities,
                         systemInstruction: systemInstruction,
-                        speechConfig: {
-                            voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } }
-                        }
+                        ...(this.textOnlyMode ? {} : {
+                            speechConfig: {
+                                voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voiceName } }
+                            }
+                        })
                     },
                     callbacks: {
                         onopen: () => {
                             console.log('[LiveManager] ✅ Connection opened successfully!');
                             this.onStatusChange("Connected");
-                            this.startRecording(stream).catch(e => console.error('Failed to start recording:', e));
+                            // Only start recording if not in text-only mode
+                            if (!this.textOnlyMode && this.lastMicStream) {
+                                this.startRecording(this.lastMicStream).catch(e => console.error('Failed to start recording:', e));
+                            }
                         },
                         onmessage: async (message) => {
                             let textContent = '';
