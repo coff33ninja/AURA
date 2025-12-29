@@ -77,6 +77,7 @@ export class LiveManager {
   public onVrmCommand: (command: VrmCommand) => void = () => {};
   public onVolumeChange: (vol: number) => void = () => {};
   public onMicVolumeChange: (vol: number) => void = () => {}; // User's mic level
+  public onFrequencyData: (data: Uint8Array) => void = () => {}; // FFT frequency data for phoneme detection
   public onStatusChange: (status: string) => void = () => {};
   public onTextReceived: (text: string) => void = () => {}; // AI response text (commands stripped)
   public onClose: () => void = () => {};
@@ -847,6 +848,9 @@ ${this.personalityInstruction ? `\nPERSONALITY: ${this.personalityInstruction}` 
         for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
         const avg = sum / dataArray.length;
         rawVol = avg / 128.0;
+        
+        // Emit frequency data for phoneme detection
+        this.onFrequencyData(dataArray);
       }
 
       // Defensive: ensure we only emit finite, clamped values

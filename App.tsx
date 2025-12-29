@@ -55,6 +55,7 @@ const App: React.FC = () => {
 
   const liveManagerRef = useRef<LiveManager | null>(null);
   const neuralCoreRef = useRef<NeuralCoreHandle>(null);
+  const frequencyDataRef = useRef<Uint8Array | null>(null); // FFT frequency data for phoneme detection
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentBehaviors, setCurrentBehaviors] = useState<ModelBehaviors | null>(null);
   
@@ -310,6 +311,10 @@ const App: React.FC = () => {
     };
     mgr.onMicVolumeChange = (vol) => {
       liveMicVolumeRef.current = vol;
+    };
+    mgr.onFrequencyData = (data) => {
+      // Store frequency data for phoneme detection in NeuralCore
+      frequencyDataRef.current = data;
     };
     mgr.onVrmCommand = (command) => setVrmCommand(command);
     mgr.onTextReceived = (text) => {
@@ -640,6 +645,7 @@ const App: React.FC = () => {
             onVrmExpressionsLoaded={setVrmExpressions}
             poseSettings={currentPoseSettings}
             onConfigLoaded={handleConfigLoaded}
+            frequencyDataRef={frequencyDataRef}
           />
         )}
       </div>

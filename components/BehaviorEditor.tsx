@@ -1128,10 +1128,66 @@ function LipSyncTab({
   config: LipSyncConfig;
   onChange: (config: Partial<LipSyncConfig>) => void;
 }) {
+  // Get phoneme detection config with defaults
+  const phonemeConfig = config.phonemeDetection ?? {
+    enabled: false,
+    minConfidence: 0.3,
+    transitionDuration: 50,
+    intensityMultiplier: 1.0,
+  };
+
+  const updatePhonemeDetection = (updates: Partial<typeof phonemeConfig>) => {
+    onChange({
+      phonemeDetection: { ...phonemeConfig, ...updates },
+    });
+  };
+
   return (
     <div className="space-y-3">
       <div>
-        <SectionHeader title="Settings" />
+        <SectionHeader title="Phoneme Detection" />
+        <Toggle
+          label="Enabled"
+          checked={phonemeConfig.enabled}
+          onChange={(enabled) => updatePhonemeDetection({ enabled })}
+        />
+        {phonemeConfig.enabled && (
+          <>
+            <Slider
+              label="Confidence"
+              value={phonemeConfig.minConfidence}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={(minConfidence) => updatePhonemeDetection({ minConfidence })}
+            />
+            <Slider
+              label="Transition"
+              value={phonemeConfig.transitionDuration}
+              min={10}
+              max={200}
+              step={5}
+              onChange={(transitionDuration) => updatePhonemeDetection({ transitionDuration })}
+            />
+            <Slider
+              label="Intensity"
+              value={phonemeConfig.intensityMultiplier}
+              min={0.1}
+              max={2}
+              step={0.1}
+              onChange={(intensityMultiplier) => updatePhonemeDetection({ intensityMultiplier })}
+            />
+          </>
+        )}
+        <p className="text-[9px] text-gray-400 mt-1">
+          {phonemeConfig.enabled 
+            ? 'Using FFT-based phoneme detection for lip sync'
+            : 'Using volume-based lip sync (legacy mode)'}
+        </p>
+      </div>
+
+      <div>
+        <SectionHeader title="Volume Settings" />
         <Slider
           label="Sensitivity"
           value={config.sensitivity}

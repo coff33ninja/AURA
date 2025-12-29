@@ -28,6 +28,8 @@ import { calculateLegPose, calculateArmSwingPose, calculateWalkPhase } from '../
 import type { WalkingBehaviorConfig } from '../types/walkingBehaviorTypes';
 import { DEFAULT_WALKING_BEHAVIOR, directionToAngle, angleToMovementVector } from '../types/walkingBehaviorTypes';
 import type { BreathingConfig } from '../types/enhancementTypes';
+import { LipSyncController } from '../utils/lipSyncController';
+import type { VisemeWeights } from '../types/phonemeLipSync';
 
 export interface PoseSettings {
   rotation: number; // Y rotation in degrees (0-360)
@@ -56,9 +58,10 @@ interface NeuralCoreProps {
   onVrmExpressionsLoaded: (expressions: string[]) => void;
   poseSettings?: PoseSettings;
   onConfigLoaded?: (config: VrmConfig) => void; // Callback when config is loaded
+  frequencyDataRef?: React.MutableRefObject<Uint8Array | null>; // FFT frequency data for phoneme detection
 }
 
-export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volume, isActive, vrmCommand, vrmModel, onVrmExpressionsLoaded, poseSettings, onConfigLoaded }, ref) => {
+export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volume, isActive, vrmCommand, vrmModel, onVrmExpressionsLoaded, poseSettings, onConfigLoaded, frequencyDataRef: externalFrequencyDataRef }, ref) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -145,6 +148,10 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
   // Camera tracking for eye contact
   const cameraTrackingRef = useRef({ enabled: true, intensity: 0.7 });
   const targetHeadRotation = useRef({ x: 0, y: 0, z: 0 });
+  
+  // Phoneme-based lip sync controller and frequency data
+  const lipSyncControllerRef = useRef<LipSyncController | null>(null);
+  const frequencyDataRef = useRef<Uint8Array | null>(null);
   
   // AI Mode tracking (ACTIVE vs PASSIVE)
   const aiModeRef = useRef<'ACTIVE' | 'PASSIVE'>('ACTIVE');
@@ -934,9 +941,19 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         reactionsMapRef.current.set(reaction.name, reaction);
       }
       
+      // Initialize LipSyncController with loaded config
+      lipSyncControllerRef.current = new LipSyncController({
+        sensitivity: behaviors.lipsync.sensitivity,
+        smoothing: behaviors.lipsync.smoothing,
+        visemeWeights: behaviors.lipsync.visemeWeights,
+        preset: behaviors.lipsync.preset,
+        phonemeDetection: behaviors.lipsync.phonemeDetection,
+      });
+      
       console.log('[NeuralCore] Loaded behaviors for', modelBaseName, {
         gestures: gesturesMapRef.current.size,
-        reactions: reactionsMapRef.current.size
+        reactions: reactionsMapRef.current.size,
+        phonemeDetection: behaviors.lipsync.phonemeDetection?.enabled ?? false
       });
     }).catch(err => {
       console.warn('[NeuralCore] Failed to load behaviors:', err);
@@ -1046,6 +1063,17 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         // Apply eye controls
         for (const [eye, value] of Object.entries(facialConfig.eyes)) {
           addExpressionTarget(eye, value);
+        }
+      } else if (type === 'lipsync' && behaviors.lipsync) {
+        // Update LipSyncController config when lipsync settings change
+        if (lipSyncControllerRef.current) {
+          lipSyncControllerRef.current.updateConfig({
+            sensitivity: behaviors.lipsync.sensitivity,
+            smoothing: behaviors.lipsync.smoothing,
+            visemeWeights: behaviors.lipsync.visemeWeights,
+            preset: behaviors.lipsync.preset,
+            phonemeDetection: behaviors.lipsync.phonemeDetection,
+          });
         }
       }
       
@@ -1341,18 +1369,43 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
             const sVol = smoothedVolume.current;
             
             // 1. Enhanced Audio-Driven Lip Sync + Phonemes
-            // Use behavior config settings for sensitivity and viseme weights
+            // Use LipSyncController for both phoneme-based and volume-based lip sync
             const behaviors = behaviorsRef.current;
             const lipsyncConfig = behaviors?.lipsync;
-            const lipSyncSensitivity = lipsyncConfig?.sensitivity ?? 4.0;
-            const visemeWeights = lipsyncConfig?.visemeWeights ?? { a: 0.8, i: 0.3, u: 0.25, e: 0.3, o: 0.6 };
             
-            const mouthOpen = Math.min(1.0, sVol * lipSyncSensitivity);
-            addExpressionTarget('a', mouthOpen * visemeWeights.a);
-            addExpressionTarget('i', mouthOpen * visemeWeights.i);
-            addExpressionTarget('u', mouthOpen * visemeWeights.u);
-            addExpressionTarget('e', mouthOpen * visemeWeights.e);
-            addExpressionTarget('o', mouthOpen * visemeWeights.o);
+            if (lipSyncControllerRef.current) {
+              const phonemeEnabled = lipsyncConfig?.phonemeDetection?.enabled ?? false;
+              let weights: VisemeWeights;
+              
+              // Use external frequency data ref if provided, otherwise use internal
+              const freqData = externalFrequencyDataRef?.current ?? frequencyDataRef.current;
+              
+              if (phonemeEnabled && freqData) {
+                // Phoneme-based lip sync using FFT frequency data
+                weights = lipSyncControllerRef.current.processFrequencyData(freqData, delta);
+              } else {
+                // Volume-based lip sync (legacy behavior)
+                weights = lipSyncControllerRef.current.processVolume(sVol, delta);
+              }
+              
+              // Apply viseme weights to expressions
+              addExpressionTarget('a', weights.a);
+              addExpressionTarget('i', weights.i);
+              addExpressionTarget('u', weights.u);
+              addExpressionTarget('e', weights.e);
+              addExpressionTarget('o', weights.o);
+            } else {
+              // Fallback: direct volume-based lip sync if controller not initialized
+              const lipSyncSensitivity = lipsyncConfig?.sensitivity ?? 4.0;
+              const visemeWeights = lipsyncConfig?.visemeWeights ?? { a: 0.8, i: 0.3, u: 0.25, e: 0.3, o: 0.6 };
+              
+              const mouthOpen = Math.min(1.0, sVol * lipSyncSensitivity);
+              addExpressionTarget('a', mouthOpen * visemeWeights.a);
+              addExpressionTarget('i', mouthOpen * visemeWeights.i);
+              addExpressionTarget('u', mouthOpen * visemeWeights.u);
+              addExpressionTarget('e', mouthOpen * visemeWeights.e);
+              addExpressionTarget('o', mouthOpen * visemeWeights.o);
+            }
 
             // 2. Breathing Animation (subtle chest movement via spine bones)
             // Use behavior idle config for breathing parameters

@@ -200,6 +200,23 @@ export interface LipSyncConfig {
     o: number;
   };
   preset: 'subtle' | 'normal' | 'exaggerated' | 'custom';
+  
+  // Phoneme detection settings (optional, disabled by default)
+  phonemeDetection?: {
+    enabled: boolean;           // Enable phoneme-based lip sync
+    minConfidence: number;      // Minimum confidence threshold (0.0-1.0)
+    transitionDuration: number; // Transition duration in ms
+    intensityMultiplier: number; // Output intensity multiplier
+  };
+  
+  // Custom phoneme-to-viseme mapping overrides (optional)
+  customPhonemeMap?: Record<string, Partial<{
+    a: number;
+    i: number;
+    u: number;
+    e: number;
+    o: number;
+  }>>;
 }
 
 /**
@@ -401,6 +418,13 @@ export const DEFAULT_LIPSYNC: LipSyncConfig = {
   smoothing: 0.3,
   visemeWeights: { a: 0.8, i: 0.3, u: 0.25, e: 0.3, o: 0.6 },
   preset: 'normal',
+  // Phoneme detection disabled by default for backward compatibility
+  phonemeDetection: {
+    enabled: false,
+    minConfidence: 0.3,
+    transitionDuration: 50,
+    intensityMultiplier: 1.0,
+  },
 };
 
 export const DEFAULT_REACTIONS: ReactionsConfig = {
@@ -508,12 +532,30 @@ export function isValidIdleConfig(config: unknown): config is IdleConfig {
 export function isValidLipSyncConfig(config: unknown): config is LipSyncConfig {
   if (!config || typeof config !== 'object') return false;
   const c = config as Record<string, unknown>;
-  return (
+  
+  // Required fields
+  const hasRequiredFields = (
     typeof c.sensitivity === 'number' &&
     typeof c.smoothing === 'number' &&
     typeof c.visemeWeights === 'object' &&
     typeof c.preset === 'string'
   );
+  
+  if (!hasRequiredFields) return false;
+  
+  // Optional phonemeDetection validation
+  if (c.phonemeDetection !== undefined) {
+    if (typeof c.phonemeDetection !== 'object' || c.phonemeDetection === null) return false;
+    const pd = c.phonemeDetection as Record<string, unknown>;
+    if (
+      typeof pd.enabled !== 'boolean' ||
+      typeof pd.minConfidence !== 'number' ||
+      typeof pd.transitionDuration !== 'number' ||
+      typeof pd.intensityMultiplier !== 'number'
+    ) return false;
+  }
+  
+  return true;
 }
 
 export function isValidReactionsConfig(config: unknown): config is ReactionsConfig {
