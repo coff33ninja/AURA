@@ -122,11 +122,43 @@
 
 ## 🔧 Technical Debt
 
-- [ ] NeuralCore.tsx is 1000+ lines - split into smaller modules:
-  - `useVrmLoader.ts` - VRM loading logic
-  - `useAnimationLoop.ts` - Animation frame handling
-  - `useGestures.ts` - Gesture definitions and playback
-  - `useExpressions.ts` - Expression management
+### File Size Crisis (URGENT)
+Current line counts are unsustainable:
+- `BehaviorEditor.tsx` - **2391 lines** 
+- `NeuralCore.tsx` - **1861 lines**
+- `App.tsx` - **1303 lines**
+
+#### BehaviorEditor.tsx Split Plan:
+- [ ] `components/behavior-editor/index.tsx` - Main container, tab navigation
+- [ ] `components/behavior-editor/TransformTab.tsx` - Position, rotation, scale, camera
+- [ ] `components/behavior-editor/BodyTab.tsx` - Arm/spine controls
+- [ ] `components/behavior-editor/HandsTab.tsx` - Finger bone controls with presets
+- [ ] `components/behavior-editor/FacialTab.tsx` - Expression/mouth/eyes controls
+- [ ] `components/behavior-editor/ExpressionsTab.tsx` - Expression mappings
+- [ ] `components/behavior-editor/GesturesTab.tsx` - Gesture editor with bone controls
+- [ ] `components/behavior-editor/IdleTab.tsx` - Breathing, blinking, sway
+- [ ] `components/behavior-editor/LipSyncTab.tsx` - Phoneme detection settings
+- [ ] `components/behavior-editor/ReactionsTab.tsx` - Reaction step editor
+- [ ] `components/behavior-editor/BackgroundTab.tsx` - Background presets
+- [ ] `components/behavior-editor/shared.tsx` - Slider, Toggle, SectionHeader components
+
+#### NeuralCore.tsx Split Plan:
+- [ ] `hooks/useVrmLoader.ts` - VRM loading, disposal, model switching
+- [ ] `hooks/useAnimationLoop.ts` - requestAnimationFrame, delta time, update cycle
+- [ ] `hooks/useGesturePlayer.ts` - Gesture queue, playback, bone interpolation
+- [ ] `hooks/useExpressionManager.ts` - Expression blending, lip sync integration
+- [ ] `hooks/useIdleAnimations.ts` - Breathing, blinking, sway, head movement
+- [ ] `hooks/useWalkingAnimation.ts` - Walking cycle, leg/arm movement
+
+#### App.tsx Split Plan:
+- [ ] `components/AppHeader.tsx` - Title, model selector, settings button
+- [ ] `components/ConnectionPanel.tsx` - Connect/disconnect, status indicators
+- [ ] `components/ChatInterface.tsx` - Text input, message display
+- [ ] `components/SettingsPanel.tsx` - Voice, personality, mode selection
+- [ ] `hooks/useAudioManager.ts` - Mic handling, audio playback
+- [ ] `hooks/useLiveConnection.ts` - WebSocket/API connection logic
+
+### Other Technical Debt
 - [x] Move emotion choreography to separate config file - BehaviorManager + JSON configs
 - [x] Create proper TypeScript interfaces for sidecar JSON structure - types/behaviorTypes.ts
 - [ ] Centralize magic numbers (camera positions, animation speeds, etc.)
