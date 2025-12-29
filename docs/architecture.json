@@ -1,0 +1,3017 @@
+{
+  "generatedAt": "2025-12-29T17:43:14.423Z",
+  "stats": {
+    "totalFiles": 34,
+    "totalImports": 217,
+    "unusedImports": 12,
+    "circularDeps": 0,
+    "orphanedFiles": 2
+  },
+  "files": [
+    {
+      "path": "components\\BehaviorEditor.tsx",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BehaviorType",
+              "isType": false
+            },
+            {
+              "name": "ModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "TransformConfig",
+              "isType": false
+            },
+            {
+              "name": "BodyConfig",
+              "isType": false
+            },
+            {
+              "name": "HandsConfig",
+              "isType": false
+            },
+            {
+              "name": "FacialConfig",
+              "isType": false
+            },
+            {
+              "name": "GesturesConfig",
+              "isType": false
+            },
+            {
+              "name": "IdleConfig",
+              "isType": false
+            },
+            {
+              "name": "LipSyncConfig",
+              "isType": false
+            },
+            {
+              "name": "ReactionsConfig",
+              "isType": false
+            },
+            {
+              "name": "ExpressionsConfig",
+              "isType": false
+            },
+            {
+              "name": "GestureDefinition",
+              "isType": false
+            },
+            {
+              "name": "ReactionDefinition",
+              "isType": false
+            },
+            {
+              "name": "ReactionStep",
+              "isType": false
+            },
+            {
+              "name": "BoneRotation",
+              "isType": false
+            },
+            {
+              "name": "FacialPreset",
+              "isType": false
+            }
+          ],
+          "source": "../types/behaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BackgroundConfig",
+              "isType": false
+            },
+            {
+              "name": "SolidBackground",
+              "isType": false
+            },
+            {
+              "name": "GradientBackground",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "WalkingBehaviorConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/walkingBehaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BACKGROUND_PRESETS",
+              "isType": false
+            },
+            {
+              "name": "isValidHexColor",
+              "isType": false
+            },
+            {
+              "name": "saveBackgroundPreference",
+              "isType": false
+            },
+            {
+              "name": "loadBackgroundPreference",
+              "isType": false
+            }
+          ],
+          "source": "../utils/backgroundRenderer",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "WalkingEditor",
+              "isType": false
+            }
+          ],
+          "source": "./WalkingEditor",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "BehaviorEditor",
+          "type": "named"
+        },
+        {
+          "name": "default",
+          "type": "default"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "components\\FpsCounter.tsx",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "getFpsColorCss",
+              "isType": false
+            },
+            {
+              "name": "FpsState",
+              "isType": true
+            }
+          ],
+          "source": "../utils/fpsCounter",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "FpsCounterProps",
+          "type": "named"
+        },
+        {
+          "name": "FpsCounter",
+          "type": "named"
+        },
+        {
+          "name": "default",
+          "type": "default"
+        }
+      ],
+      "unusedImports": [
+        {
+          "name": "FpsState",
+          "source": "../utils/fpsCounter",
+          "file": "components\\FpsCounter.tsx"
+        }
+      ]
+    },
+    {
+      "path": "components\\NeuralCore.tsx",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VRM",
+              "isType": false
+            },
+            {
+              "name": "VRMHumanBoneName",
+              "isType": false
+            },
+            {
+              "name": "VRMUtils",
+              "isType": false
+            }
+          ],
+          "source": "@pixiv/three-vrm",
+          "isRelative": false
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VrmCommand",
+              "isType": false
+            }
+          ],
+          "source": "../services/liveManager",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VrmConfig",
+              "isType": false
+            },
+            {
+              "name": "getVrmConfig",
+              "isType": false
+            },
+            {
+              "name": "saveVrmConfigToStorage",
+              "isType": false
+            },
+            {
+              "name": "DEFAULT_VRM_CONFIG",
+              "isType": false
+            }
+          ],
+          "source": "../types/vrmConfig",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "loadModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "getCurrentBehaviors",
+              "isType": false
+            },
+            {
+              "name": "onBehaviorChanged",
+              "isType": false
+            }
+          ],
+          "source": "../services/behaviorManager",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "getGlobalVrmModelManager",
+              "isType": false
+            }
+          ],
+          "source": "../services/vrmModelManager",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "calculateLodLevel",
+              "isType": false
+            },
+            {
+              "name": "applyLodSettings",
+              "isType": false
+            },
+            {
+              "name": "shouldUpdateLod",
+              "isType": false
+            },
+            {
+              "name": "DEFAULT_LOD_CONFIG",
+              "isType": false
+            },
+            {
+              "name": "createDeviceOptimizedLodConfig",
+              "isType": false
+            },
+            {
+              "name": "LodLevel",
+              "isType": true
+            },
+            {
+              "name": "LodConfig",
+              "isType": true
+            }
+          ],
+          "source": "../utils/lodManager",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "detectDeviceCapabilities",
+              "isType": false
+            },
+            {
+              "name": "getOptimalParticleCount",
+              "isType": false
+            }
+          ],
+          "source": "../utils/deviceDetector",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "ModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "GestureDefinition",
+              "isType": false
+            },
+            {
+              "name": "ReactionDefinition",
+              "isType": false
+            },
+            {
+              "name": "ReactionStep",
+              "isType": false
+            },
+            {
+              "name": "IdleConfig",
+              "isType": false
+            },
+            {
+              "name": "LipSyncConfig",
+              "isType": false
+            },
+            {
+              "name": "TransformConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/behaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "getEasingFunction",
+              "isType": false
+            },
+            {
+              "name": "EasingType",
+              "isType": true
+            }
+          ],
+          "source": "../utils/animationBlender",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "updateSaccadeState",
+              "isType": false
+            },
+            {
+              "name": "DEFAULT_SACCADE_CONFIG",
+              "isType": false
+            }
+          ],
+          "source": "../utils/saccadeGenerator",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "calculateBreathingState",
+              "isType": false
+            },
+            {
+              "name": "getStateMultiplier",
+              "isType": false
+            }
+          ],
+          "source": "../utils/breathingAnimator",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "calculateWalkingBob",
+              "isType": false
+            },
+            {
+              "name": "smoothTransitionBob",
+              "isType": false
+            },
+            {
+              "name": "DEFAULT_WALKING_CONFIG",
+              "isType": false
+            }
+          ],
+          "source": "../utils/walkingAnimator",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "calculateLegPose",
+              "isType": false
+            },
+            {
+              "name": "calculateArmSwingPose",
+              "isType": false
+            },
+            {
+              "name": "calculateWalkPhase",
+              "isType": false
+            }
+          ],
+          "source": "../utils/walkingController",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "WalkingBehaviorConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/walkingBehaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "DEFAULT_WALKING_BEHAVIOR",
+              "isType": false
+            },
+            {
+              "name": "directionToAngle",
+              "isType": false
+            },
+            {
+              "name": "angleToMovementVector",
+              "isType": false
+            }
+          ],
+          "source": "../types/walkingBehaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BreathingConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "LipSyncController",
+              "isType": false
+            }
+          ],
+          "source": "../utils/lipSyncController",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VisemeWeights",
+              "isType": false
+            }
+          ],
+          "source": "../types/phonemeLipSync",
+          "isRelative": true
+        },
+        {
+          "type": "namespace",
+          "names": [
+            {
+              "name": "THREE"
+            }
+          ],
+          "source": "three",
+          "isRelative": false
+        }
+      ],
+      "exports": [
+        {
+          "name": "PoseSettings",
+          "type": "named"
+        },
+        {
+          "name": "NeuralCoreHandle",
+          "type": "named"
+        },
+        {
+          "name": "NeuralCore",
+          "type": "named"
+        }
+      ],
+      "unusedImports": [
+        {
+          "name": "saveVrmConfigToStorage",
+          "source": "../types/vrmConfig",
+          "file": "components\\NeuralCore.tsx"
+        },
+        {
+          "name": "IdleConfig",
+          "source": "../types/behaviorTypes",
+          "file": "components\\NeuralCore.tsx"
+        },
+        {
+          "name": "LipSyncConfig",
+          "source": "../types/behaviorTypes",
+          "file": "components\\NeuralCore.tsx"
+        },
+        {
+          "name": "TransformConfig",
+          "source": "../types/behaviorTypes",
+          "file": "components\\NeuralCore.tsx"
+        },
+        {
+          "name": "DEFAULT_WALKING_CONFIG",
+          "source": "../utils/walkingAnimator",
+          "file": "components\\NeuralCore.tsx"
+        }
+      ]
+    },
+    {
+      "path": "components\\WalkingEditor.tsx",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "WalkingBehaviorConfig",
+              "isType": false
+            },
+            {
+              "name": "WalkingStyle",
+              "isType": false
+            },
+            {
+              "name": "WalkingDirection",
+              "isType": false
+            }
+          ],
+          "source": "../types/walkingBehaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "WALKING_PRESETS",
+              "isType": false
+            }
+          ],
+          "source": "../types/walkingBehaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "applyWalkingStyle",
+              "isType": false
+            }
+          ],
+          "source": "../utils/walkingController",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "WalkingEditor",
+          "type": "named"
+        }
+      ],
+      "unusedImports": [
+        {
+          "name": "WALKING_PRESETS",
+          "source": "../types/walkingBehaviorTypes",
+          "file": "components\\WalkingEditor.tsx"
+        }
+      ]
+    },
+    {
+      "path": "services\\aiInstructionGenerator.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "ModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "GestureDefinition",
+              "isType": false
+            },
+            {
+              "name": "ReactionDefinition",
+              "isType": false
+            }
+          ],
+          "source": "../types/behaviorTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "getEnabledExpressions",
+          "type": "named"
+        },
+        {
+          "name": "getEnabledGestures",
+          "type": "named"
+        },
+        {
+          "name": "getEnabledReactions",
+          "type": "named"
+        },
+        {
+          "name": "generateCommandList",
+          "type": "named"
+        },
+        {
+          "name": "generate",
+          "type": "named"
+        },
+        {
+          "name": "generateMinimal",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "services\\behaviorManager.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BehaviorType",
+              "isType": false
+            },
+            {
+              "name": "BehaviorConfigs",
+              "isType": false
+            },
+            {
+              "name": "ModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "ValidationResult",
+              "isType": false
+            },
+            {
+              "name": "deepMergeConfig",
+              "isType": false
+            },
+            {
+              "name": "createDefaultModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "isValidTransformConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidBodyConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidHandsConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidFacialConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidGesturesConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidIdleConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidLipSyncConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidReactionsConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidExpressionsConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/behaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "loadAllConfigs",
+              "isType": false
+            },
+            {
+              "name": "clearModelCache",
+              "isType": false
+            }
+          ],
+          "source": "./configLoader",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "getCurrentBehaviors",
+          "type": "named"
+        },
+        {
+          "name": "updateBehavior",
+          "type": "named"
+        },
+        {
+          "name": "saveToStorage",
+          "type": "named"
+        },
+        {
+          "name": "loadFromStorage",
+          "type": "named"
+        },
+        {
+          "name": "clearStorage",
+          "type": "named"
+        },
+        {
+          "name": "exportConfig",
+          "type": "named"
+        },
+        {
+          "name": "importConfig",
+          "type": "named"
+        },
+        {
+          "name": "onBehaviorsLoaded",
+          "type": "named"
+        },
+        {
+          "name": "onBehaviorChanged",
+          "type": "named"
+        },
+        {
+          "name": "resetManager",
+          "type": "named"
+        },
+        {
+          "name": "setBehaviors",
+          "type": "named"
+        }
+      ],
+      "unusedImports": [
+        {
+          "name": "createDefaultModelBehaviors",
+          "source": "../types/behaviorTypes",
+          "file": "services\\behaviorManager.ts"
+        },
+        {
+          "name": "clearModelCache",
+          "source": "./configLoader",
+          "file": "services\\behaviorManager.ts"
+        }
+      ]
+    },
+    {
+      "path": "services\\configLoader.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BehaviorType",
+              "isType": false
+            },
+            {
+              "name": "BehaviorConfigs",
+              "isType": false
+            },
+            {
+              "name": "ModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "TransformConfig",
+              "isType": false
+            },
+            {
+              "name": "BodyConfig",
+              "isType": false
+            },
+            {
+              "name": "HandsConfig",
+              "isType": false
+            },
+            {
+              "name": "FacialConfig",
+              "isType": false
+            },
+            {
+              "name": "GesturesConfig",
+              "isType": false
+            },
+            {
+              "name": "IdleConfig",
+              "isType": false
+            },
+            {
+              "name": "LipSyncConfig",
+              "isType": false
+            },
+            {
+              "name": "ReactionsConfig",
+              "isType": false
+            },
+            {
+              "name": "ExpressionsConfig",
+              "isType": false
+            },
+            {
+              "name": "getDefaultConfig",
+              "isType": false
+            },
+            {
+              "name": "deepMergeConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidTransformConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidBodyConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidHandsConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidFacialConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidGesturesConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidIdleConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidLipSyncConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidReactionsConfig",
+              "isType": false
+            },
+            {
+              "name": "isValidExpressionsConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/behaviorTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "validateConfig",
+          "type": "named"
+        },
+        {
+          "name": "clearCache",
+          "type": "named"
+        },
+        {
+          "name": "clearModelCache",
+          "type": "named"
+        },
+        {
+          "name": "getFetchCount",
+          "type": "named"
+        },
+        {
+          "name": "resetFetchCount",
+          "type": "named"
+        },
+        {
+          "name": "isCached",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "services\\conversationStore.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "ConversationMessage",
+          "type": "named"
+        },
+        {
+          "name": "ConversationSession",
+          "type": "named"
+        },
+        {
+          "name": "conversationStore",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "services\\liveManager.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "GoogleGenAI",
+              "isType": false
+            },
+            {
+              "name": "Modality",
+              "isType": false
+            }
+          ],
+          "source": "@google/genai",
+          "isRelative": false
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "base64ToUint8Array",
+              "isType": false
+            },
+            {
+              "name": "decodeAudioData",
+              "isType": false
+            },
+            {
+              "name": "floatTo16BitPCM",
+              "isType": false
+            },
+            {
+              "name": "arrayBufferToBase64",
+              "isType": false
+            },
+            {
+              "name": "downsampleBuffer",
+              "isType": false
+            }
+          ],
+          "source": "../utils/audioUtils",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "conversationStore",
+              "isType": false
+            }
+          ],
+          "source": "./conversationStore",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "generate",
+              "alias": "generateAIInstructions",
+              "isType": false
+            },
+            {
+              "name": "generateMinimal",
+              "isType": false
+            }
+          ],
+          "source": "./aiInstructionGenerator",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "ModelBehaviors",
+              "isType": false
+            }
+          ],
+          "source": "../types/behaviorTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "VrmCommand",
+          "type": "named"
+        },
+        {
+          "name": "LiveManager",
+          "type": "named"
+        }
+      ],
+      "unusedImports": [
+        {
+          "name": "generateMinimal",
+          "source": "./aiInstructionGenerator",
+          "file": "services\\liveManager.ts"
+        }
+      ]
+    },
+    {
+      "path": "services\\vrmModelManager.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "GLTFLoader",
+              "isType": false
+            }
+          ],
+          "source": "three/addons/loaders/GLTFLoader.js",
+          "isRelative": false
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VRMLoaderPlugin",
+              "isType": false
+            },
+            {
+              "name": "VRM",
+              "isType": false
+            },
+            {
+              "name": "VRMUtils",
+              "isType": false
+            }
+          ],
+          "source": "@pixiv/three-vrm",
+          "isRelative": false
+        },
+        {
+          "type": "namespace",
+          "names": [
+            {
+              "name": "THREE"
+            }
+          ],
+          "source": "three",
+          "isRelative": false
+        }
+      ],
+      "exports": [
+        {
+          "name": "ModelCacheEntry",
+          "type": "named"
+        },
+        {
+          "name": "LoadingState",
+          "type": "named"
+        },
+        {
+          "name": "VrmModelManagerOptions",
+          "type": "named"
+        },
+        {
+          "name": "VrmModelManager",
+          "type": "named"
+        },
+        {
+          "name": "createVrmModelManager",
+          "type": "named"
+        },
+        {
+          "name": "getGlobalVrmModelManager",
+          "type": "named"
+        },
+        {
+          "name": "resetGlobalVrmModelManager",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\animationBlender.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BoneState",
+              "isType": false
+            },
+            {
+              "name": "BlendOptions",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "easingFunctions",
+          "type": "named"
+        },
+        {
+          "name": "EasingType",
+          "type": "named"
+        },
+        {
+          "name": "getEasingFunction",
+          "type": "named"
+        },
+        {
+          "name": "clamp",
+          "type": "named"
+        },
+        {
+          "name": "lerp",
+          "type": "named"
+        },
+        {
+          "name": "lerpRotation",
+          "type": "named"
+        },
+        {
+          "name": "blendBoneState",
+          "type": "named"
+        },
+        {
+          "name": "blendBoneRotations",
+          "type": "named"
+        },
+        {
+          "name": "createBlendController",
+          "type": "named"
+        },
+        {
+          "name": "degToRad",
+          "type": "named"
+        },
+        {
+          "name": "radToDeg",
+          "type": "named"
+        },
+        {
+          "name": "createBoneState",
+          "type": "named"
+        },
+        {
+          "name": "createEmptyPose",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\audioUtils.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "base64ToUint8Array",
+          "type": "named"
+        },
+        {
+          "name": "arrayBufferToBase64",
+          "type": "named"
+        },
+        {
+          "name": "floatTo16BitPCM",
+          "type": "named"
+        },
+        {
+          "name": "downsampleBuffer",
+          "type": "named"
+        },
+        {
+          "name": "decodeAudioData",
+          "type": "named"
+        },
+        {
+          "name": "closeDecodeContext",
+          "type": "named"
+        },
+        {
+          "name": "calculateRMS",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\backgroundRenderer.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BackgroundConfig",
+              "isType": false
+            },
+            {
+              "name": "SolidBackground",
+              "isType": false
+            },
+            {
+              "name": "GradientBackground",
+              "isType": false
+            },
+            {
+              "name": "HdriBackground",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "hexToRgb",
+          "type": "named"
+        },
+        {
+          "name": "isValidHexColor",
+          "type": "named"
+        },
+        {
+          "name": "createGradientTexture",
+          "type": "named"
+        },
+        {
+          "name": "applySolidBackground",
+          "type": "named"
+        },
+        {
+          "name": "applyGradientBackground",
+          "type": "named"
+        },
+        {
+          "name": "clearBackground",
+          "type": "named"
+        },
+        {
+          "name": "saveBackgroundPreference",
+          "type": "named"
+        },
+        {
+          "name": "loadBackgroundPreference",
+          "type": "named"
+        },
+        {
+          "name": "getDefaultBackground",
+          "type": "named"
+        },
+        {
+          "name": "BACKGROUND_PRESETS",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\breathingAnimator.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BreathingConfig",
+              "isType": false
+            },
+            {
+              "name": "BreathingState",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "DEFAULT_BREATHING_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "createBreathingState",
+          "type": "named"
+        },
+        {
+          "name": "calculateBreathingState",
+          "type": "named"
+        },
+        {
+          "name": "getStateMultiplier",
+          "type": "named"
+        },
+        {
+          "name": "blendWithExisting",
+          "type": "named"
+        },
+        {
+          "name": "isValidBreathingState",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\deviceDetector.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "DeviceCapabilities",
+          "type": "named"
+        },
+        {
+          "name": "detectDeviceCapabilities",
+          "type": "named"
+        },
+        {
+          "name": "getOptimalParticleCount",
+          "type": "named"
+        },
+        {
+          "name": "getOptimalRenderScale",
+          "type": "named"
+        },
+        {
+          "name": "shouldReduceAnimations",
+          "type": "named"
+        },
+        {
+          "name": "getCapabilitiesSummary",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\fpsCounter.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "FpsColor",
+          "type": "named"
+        },
+        {
+          "name": "FpsState",
+          "type": "named"
+        },
+        {
+          "name": "FpsCounterConfig",
+          "type": "named"
+        },
+        {
+          "name": "FpsCounter",
+          "type": "named"
+        },
+        {
+          "name": "getFpsColor",
+          "type": "named"
+        },
+        {
+          "name": "createFpsCounter",
+          "type": "named"
+        },
+        {
+          "name": "formatFpsState",
+          "type": "named"
+        },
+        {
+          "name": "getFpsColorCss",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\lipSyncController.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "LipSyncConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/behaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "PhonemeDetector",
+              "isType": false
+            }
+          ],
+          "source": "./phonemeDetector",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VisemeMapper",
+              "isType": false
+            }
+          ],
+          "source": "./visemeMapper",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VisemeWeights",
+              "isType": false
+            },
+            {
+              "name": "LipSyncState",
+              "isType": false
+            },
+            {
+              "name": "Phoneme",
+              "isType": false
+            },
+            {
+              "name": "createNeutralWeights",
+              "isType": false
+            },
+            {
+              "name": "PhonemeDetectorConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/phonemeLipSync",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "LipSyncControllerConfig",
+          "type": "named"
+        },
+        {
+          "name": "LipSyncController",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\lodManager.ts",
+      "imports": [
+        {
+          "type": "namespace",
+          "names": [
+            {
+              "name": "THREE"
+            }
+          ],
+          "source": "three",
+          "isRelative": false
+        }
+      ],
+      "exports": [
+        {
+          "name": "ShadowQuality",
+          "type": "named"
+        },
+        {
+          "name": "LodLevel",
+          "type": "named"
+        },
+        {
+          "name": "LodConfig",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_LOD_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "calculateLodLevel",
+          "type": "named"
+        },
+        {
+          "name": "applyLodSettings",
+          "type": "named"
+        },
+        {
+          "name": "getShadowMapSize",
+          "type": "named"
+        },
+        {
+          "name": "createLodConfig",
+          "type": "named"
+        },
+        {
+          "name": "createDeviceOptimizedLodConfig",
+          "type": "named"
+        },
+        {
+          "name": "interpolateLodLevels",
+          "type": "named"
+        },
+        {
+          "name": "shouldUpdateLod",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\mediaCapture.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "MediaCaptureOptions",
+              "isType": false
+            },
+            {
+              "name": "RecordingOptions",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "isMediaRecorderSupported",
+          "type": "named"
+        },
+        {
+          "name": "getSupportedMimeType",
+          "type": "named"
+        },
+        {
+          "name": "downloadBlob",
+          "type": "named"
+        },
+        {
+          "name": "startRecording",
+          "type": "named"
+        },
+        {
+          "name": "stopRecording",
+          "type": "named"
+        },
+        {
+          "name": "createRecordingSession",
+          "type": "named"
+        },
+        {
+          "name": "generateFilename",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\phonemeDetector.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "Phoneme",
+              "isType": false
+            },
+            {
+              "name": "PhonemeResult",
+              "isType": false
+            },
+            {
+              "name": "PhonemeDetectorConfig",
+              "isType": false
+            },
+            {
+              "name": "DEFAULT_PHONEME_DETECTOR_CONFIG",
+              "isType": false
+            }
+          ],
+          "source": "../types/phonemeLipSync",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "PhonemeDetector",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\saccadeGenerator.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "SaccadeConfig",
+              "isType": false
+            },
+            {
+              "name": "SaccadeState",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "DEFAULT_SACCADE_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "createSaccadeState",
+          "type": "named"
+        },
+        {
+          "name": "generateSaccade",
+          "type": "named"
+        },
+        {
+          "name": "getNextSaccadeInterval",
+          "type": "named"
+        },
+        {
+          "name": "updateSaccadeState",
+          "type": "named"
+        },
+        {
+          "name": "blendWithGaze",
+          "type": "named"
+        },
+        {
+          "name": "degToRad",
+          "type": "named"
+        },
+        {
+          "name": "saccadeToRadians",
+          "type": "named"
+        },
+        {
+          "name": "isValidSaccadeOffset",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\visemeMapper.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "Phoneme",
+              "isType": false
+            },
+            {
+              "name": "PhonemeResult",
+              "isType": false
+            },
+            {
+              "name": "VisemeWeights",
+              "isType": false
+            },
+            {
+              "name": "VisemeMapperConfig",
+              "isType": false
+            },
+            {
+              "name": "DEFAULT_VISEME_MAPPER_CONFIG",
+              "isType": false
+            },
+            {
+              "name": "ALL_PHONEMES",
+              "isType": false
+            },
+            {
+              "name": "createNeutralWeights",
+              "isType": false
+            }
+          ],
+          "source": "../types/phonemeLipSync",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "VisemeMapper",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\vrmValidator.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VrmValidationResult",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "validateVrmBuffer",
+          "type": "named"
+        },
+        {
+          "name": "createVrmObjectUrl",
+          "type": "named"
+        },
+        {
+          "name": "isVrmFilename",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\walkingAnimator.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "WalkingConfig",
+              "isType": false
+            },
+            {
+              "name": "WalkingState",
+              "isType": false
+            }
+          ],
+          "source": "../types/enhancementTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "DEFAULT_WALKING_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "createWalkingState",
+          "type": "named"
+        },
+        {
+          "name": "calculateWalkingBob",
+          "type": "named"
+        },
+        {
+          "name": "smoothTransitionBob",
+          "type": "named"
+        },
+        {
+          "name": "calculateLegPhase",
+          "type": "named"
+        },
+        {
+          "name": "getLegRotations",
+          "type": "named"
+        },
+        {
+          "name": "isValidWalkingState",
+          "type": "named"
+        },
+        {
+          "name": "getArmSwing",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "utils\\walkingController.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "WalkingBehaviorConfig",
+              "isType": false
+            },
+            {
+              "name": "WalkingStyle",
+              "isType": false
+            },
+            {
+              "name": "LegConfig",
+              "isType": false
+            },
+            {
+              "name": "ArmSwingConfig",
+              "isType": false
+            }
+          ],
+          "source": "../types/walkingBehaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "DEFAULT_WALKING_BEHAVIOR",
+              "isType": false
+            },
+            {
+              "name": "WALKING_PRESETS",
+              "isType": false
+            },
+            {
+              "name": "isValidWalkingStyle",
+              "isType": false
+            }
+          ],
+          "source": "../types/walkingBehaviorTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "LegPose",
+          "type": "named"
+        },
+        {
+          "name": "ArmSwingPose",
+          "type": "named"
+        },
+        {
+          "name": "calculateLegPose",
+          "type": "named"
+        },
+        {
+          "name": "calculateArmSwingPose",
+          "type": "named"
+        },
+        {
+          "name": "getWalkingPreset",
+          "type": "named"
+        },
+        {
+          "name": "applyWalkingStyle",
+          "type": "named"
+        },
+        {
+          "name": "createDefaultWalkingBehavior",
+          "type": "named"
+        },
+        {
+          "name": "calculateWalkPhase",
+          "type": "named"
+        },
+        {
+          "name": "isValidLegPose",
+          "type": "named"
+        },
+        {
+          "name": "isValidArmSwingPose",
+          "type": "named"
+        }
+      ],
+      "unusedImports": [
+        {
+          "name": "LegConfig",
+          "source": "../types/walkingBehaviorTypes",
+          "file": "utils\\walkingController.ts"
+        },
+        {
+          "name": "ArmSwingConfig",
+          "source": "../types/walkingBehaviorTypes",
+          "file": "utils\\walkingController.ts"
+        }
+      ]
+    },
+    {
+      "path": "types\\behaviorTypes.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "BehaviorType",
+          "type": "named"
+        },
+        {
+          "name": "TransformConfig",
+          "type": "named"
+        },
+        {
+          "name": "BodyConfig",
+          "type": "named"
+        },
+        {
+          "name": "BoneRotation",
+          "type": "named"
+        },
+        {
+          "name": "HandsConfig",
+          "type": "named"
+        },
+        {
+          "name": "FacialPreset",
+          "type": "named"
+        },
+        {
+          "name": "FacialConfig",
+          "type": "named"
+        },
+        {
+          "name": "GestureDefinition",
+          "type": "named"
+        },
+        {
+          "name": "GesturesConfig",
+          "type": "named"
+        },
+        {
+          "name": "IdleConfig",
+          "type": "named"
+        },
+        {
+          "name": "LipSyncConfig",
+          "type": "named"
+        },
+        {
+          "name": "ReactionStep",
+          "type": "named"
+        },
+        {
+          "name": "ReactionDefinition",
+          "type": "named"
+        },
+        {
+          "name": "ReactionsConfig",
+          "type": "named"
+        },
+        {
+          "name": "ExpressionCombo",
+          "type": "named"
+        },
+        {
+          "name": "ExpressionsConfig",
+          "type": "named"
+        },
+        {
+          "name": "ModelBehaviors",
+          "type": "named"
+        },
+        {
+          "name": "BehaviorConfigs",
+          "type": "named"
+        },
+        {
+          "name": "ValidationResult",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_TRANSFORM",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_BODY",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_HANDS",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_FACIAL",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_GESTURES",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_IDLE",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_LIPSYNC",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_REACTIONS",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_EXPRESSIONS",
+          "type": "named"
+        },
+        {
+          "name": "getDefaultConfig",
+          "type": "named"
+        },
+        {
+          "name": "createDefaultModelBehaviors",
+          "type": "named"
+        },
+        {
+          "name": "deepMergeConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidTransformConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidGesturesConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidIdleConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidLipSyncConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidReactionsConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidExpressionsConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidBodyConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidHandsConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidFacialConfig",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "types\\enhancementTypes.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "MediaCaptureOptions",
+          "type": "named"
+        },
+        {
+          "name": "RecordingOptions",
+          "type": "named"
+        },
+        {
+          "name": "RecordingState",
+          "type": "named"
+        },
+        {
+          "name": "VrmValidationResult",
+          "type": "named"
+        },
+        {
+          "name": "CustomVrmEntry",
+          "type": "named"
+        },
+        {
+          "name": "BackgroundType",
+          "type": "named"
+        },
+        {
+          "name": "SolidBackground",
+          "type": "named"
+        },
+        {
+          "name": "GradientBackground",
+          "type": "named"
+        },
+        {
+          "name": "HdriBackground",
+          "type": "named"
+        },
+        {
+          "name": "BackgroundConfig",
+          "type": "named"
+        },
+        {
+          "name": "BackgroundPreferences",
+          "type": "named"
+        },
+        {
+          "name": "BoneState",
+          "type": "named"
+        },
+        {
+          "name": "EasingType",
+          "type": "named"
+        },
+        {
+          "name": "BlendOptions",
+          "type": "named"
+        },
+        {
+          "name": "SaccadeConfig",
+          "type": "named"
+        },
+        {
+          "name": "SaccadeState",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_SACCADE_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "BreathingConfig",
+          "type": "named"
+        },
+        {
+          "name": "BreathingState",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_BREATHING_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "WalkingConfig",
+          "type": "named"
+        },
+        {
+          "name": "WalkingState",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_WALKING_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "ShadowQuality",
+          "type": "named"
+        },
+        {
+          "name": "LodLevel",
+          "type": "named"
+        },
+        {
+          "name": "LodConfig",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_LOD_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "DeviceCapabilities",
+          "type": "named"
+        },
+        {
+          "name": "FpsColor",
+          "type": "named"
+        },
+        {
+          "name": "FpsState",
+          "type": "named"
+        },
+        {
+          "name": "ModelCacheEntry",
+          "type": "named"
+        },
+        {
+          "name": "VrmModelManagerOptions",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "types\\phonemeLipSync.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "Phoneme",
+          "type": "named"
+        },
+        {
+          "name": "ALL_PHONEMES",
+          "type": "named"
+        },
+        {
+          "name": "PhonemeResult",
+          "type": "named"
+        },
+        {
+          "name": "VisemeKey",
+          "type": "named"
+        },
+        {
+          "name": "VisemeWeights",
+          "type": "named"
+        },
+        {
+          "name": "PhonemeDetectorConfig",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_PHONEME_DETECTOR_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "VisemeMapperConfig",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_VISEME_MAPPER_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "PhonemeDetectionSettings",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_PHONEME_DETECTION_SETTINGS",
+          "type": "named"
+        },
+        {
+          "name": "LipSyncState",
+          "type": "named"
+        },
+        {
+          "name": "createNeutralWeights",
+          "type": "named"
+        },
+        {
+          "name": "isValidPhoneme",
+          "type": "named"
+        },
+        {
+          "name": "isValidVisemeWeights",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "types\\vrmConfig.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "VrmConfig",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_VRM_CONFIG",
+          "type": "named"
+        },
+        {
+          "name": "saveVrmConfigToStorage",
+          "type": "named"
+        },
+        {
+          "name": "loadVrmConfigFromStorage",
+          "type": "named"
+        },
+        {
+          "name": "clearConfigCache",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "types\\walkingBehaviorTypes.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "WalkingStyle",
+          "type": "named"
+        },
+        {
+          "name": "WalkingDirection",
+          "type": "named"
+        },
+        {
+          "name": "LegConfig",
+          "type": "named"
+        },
+        {
+          "name": "ArmSwingConfig",
+          "type": "named"
+        },
+        {
+          "name": "WalkingBehaviorConfig",
+          "type": "named"
+        },
+        {
+          "name": "DEFAULT_WALKING_BEHAVIOR",
+          "type": "named"
+        },
+        {
+          "name": "WALKING_PRESETS",
+          "type": "named"
+        },
+        {
+          "name": "directionToAngle",
+          "type": "named"
+        },
+        {
+          "name": "angleToMovementVector",
+          "type": "named"
+        },
+        {
+          "name": "isValidWalkingBehaviorConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidLegConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidArmSwingConfig",
+          "type": "named"
+        },
+        {
+          "name": "isValidWalkingStyle",
+          "type": "named"
+        },
+        {
+          "name": "isValidWalkingDirection",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "App.tsx",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "ConnectionState",
+              "isType": false
+            }
+          ],
+          "source": "./types",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "LiveManager",
+              "isType": false
+            },
+            {
+              "name": "VrmCommand",
+              "isType": false
+            }
+          ],
+          "source": "./services/liveManager",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "NeuralCore",
+              "isType": false
+            },
+            {
+              "name": "PoseSettings",
+              "isType": false
+            },
+            {
+              "name": "NeuralCoreHandle",
+              "isType": false
+            }
+          ],
+          "source": "./components/NeuralCore",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "BehaviorEditor",
+              "isType": false
+            }
+          ],
+          "source": "./components/BehaviorEditor",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "FpsCounter",
+              "isType": false
+            }
+          ],
+          "source": "./components/FpsCounter",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "conversationStore",
+              "isType": false
+            }
+          ],
+          "source": "./services/conversationStore",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "VrmConfig",
+              "isType": false
+            }
+          ],
+          "source": "./types/vrmConfig",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "loadModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "onBehaviorsLoaded",
+              "isType": false
+            },
+            {
+              "name": "onBehaviorChanged",
+              "isType": false
+            },
+            {
+              "name": "getCurrentBehaviors",
+              "isType": false
+            },
+            {
+              "name": "updateBehavior",
+              "isType": false
+            },
+            {
+              "name": "saveToStorage",
+              "isType": false
+            }
+          ],
+          "source": "./services/behaviorManager",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "ModelBehaviors",
+              "isType": false
+            },
+            {
+              "name": "BehaviorType",
+              "isType": false
+            },
+            {
+              "name": "BehaviorConfigs",
+              "isType": false
+            }
+          ],
+          "source": "./types/behaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "WalkingBehaviorConfig",
+              "isType": false
+            }
+          ],
+          "source": "./types/walkingBehaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "DEFAULT_WALKING_BEHAVIOR",
+              "isType": false
+            }
+          ],
+          "source": "./types/walkingBehaviorTypes",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "captureAndDownloadScreenshot",
+              "isType": false
+            },
+            {
+              "name": "createRecordingSession",
+              "isType": false
+            },
+            {
+              "name": "isMediaRecorderSupported",
+              "isType": false
+            },
+            {
+              "name": "downloadBlob",
+              "isType": false
+            },
+            {
+              "name": "generateFilename",
+              "isType": false
+            }
+          ],
+          "source": "./utils/mediaCapture",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "validateVrmFile",
+              "isType": false
+            },
+            {
+              "name": "createVrmObjectUrl",
+              "isType": false
+            }
+          ],
+          "source": "./utils/vrmValidator",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "createFpsCounter",
+              "isType": false
+            },
+            {
+              "name": "FpsState",
+              "isType": true
+            }
+          ],
+          "source": "./utils/fpsCounter",
+          "isRelative": true
+        },
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "CustomVrmEntry",
+              "isType": false
+            }
+          ],
+          "source": "./types/enhancementTypes",
+          "isRelative": true
+        }
+      ],
+      "exports": [
+        {
+          "name": "default",
+          "type": "default"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "index.tsx",
+      "imports": [
+        {
+          "type": "default",
+          "names": [
+            {
+              "name": "React"
+            }
+          ],
+          "source": "react",
+          "isRelative": false
+        },
+        {
+          "type": "default",
+          "names": [
+            {
+              "name": "ReactDOM"
+            }
+          ],
+          "source": "react-dom/client",
+          "isRelative": false
+        },
+        {
+          "type": "default",
+          "names": [
+            {
+              "name": "App"
+            }
+          ],
+          "source": "./App",
+          "isRelative": true
+        }
+      ],
+      "exports": [],
+      "unusedImports": []
+    },
+    {
+      "path": "types.ts",
+      "imports": [],
+      "exports": [
+        {
+          "name": "AudioQueueItem",
+          "type": "named"
+        },
+        {
+          "name": "VisualizerData",
+          "type": "named"
+        },
+        {
+          "name": "ConnectionState",
+          "type": "named"
+        },
+        {
+          "name": "PcmAudio",
+          "type": "named"
+        }
+      ],
+      "unusedImports": []
+    },
+    {
+      "path": "vite.config.ts",
+      "imports": [
+        {
+          "type": "named",
+          "names": [
+            {
+              "name": "defineConfig",
+              "isType": false
+            },
+            {
+              "name": "loadEnv",
+              "isType": false
+            }
+          ],
+          "source": "vite",
+          "isRelative": false
+        }
+      ],
+      "exports": [
+        {
+          "name": "default",
+          "type": "default"
+        }
+      ],
+      "unusedImports": []
+    }
+  ],
+  "dependencies": {
+    "components\\BehaviorEditor.tsx": [
+      "types\\behaviorTypes.ts",
+      "types\\enhancementTypes.ts",
+      "types\\walkingBehaviorTypes.ts",
+      "utils\\backgroundRenderer.ts",
+      "components\\WalkingEditor.tsx"
+    ],
+    "components\\FpsCounter.tsx": [
+      "utils\\fpsCounter.ts"
+    ],
+    "components\\NeuralCore.tsx": [
+      "services\\liveManager.ts",
+      "types\\vrmConfig.ts",
+      "services\\behaviorManager.ts",
+      "services\\vrmModelManager.ts",
+      "utils\\lodManager.ts",
+      "utils\\deviceDetector.ts",
+      "types\\behaviorTypes.ts",
+      "utils\\animationBlender.ts",
+      "utils\\saccadeGenerator.ts",
+      "utils\\breathingAnimator.ts",
+      "utils\\walkingAnimator.ts",
+      "utils\\walkingController.ts",
+      "types\\walkingBehaviorTypes.ts",
+      "types\\walkingBehaviorTypes.ts",
+      "types\\enhancementTypes.ts",
+      "utils\\lipSyncController.ts",
+      "types\\phonemeLipSync.ts"
+    ],
+    "components\\WalkingEditor.tsx": [
+      "types\\walkingBehaviorTypes.ts",
+      "types\\walkingBehaviorTypes.ts",
+      "utils\\walkingController.ts"
+    ],
+    "services\\aiInstructionGenerator.ts": [
+      "types\\behaviorTypes.ts"
+    ],
+    "services\\behaviorManager.ts": [
+      "types\\behaviorTypes.ts",
+      "services\\configLoader.ts"
+    ],
+    "services\\configLoader.ts": [
+      "types\\behaviorTypes.ts"
+    ],
+    "services\\conversationStore.ts": [],
+    "services\\liveManager.ts": [
+      "utils\\audioUtils.ts",
+      "services\\conversationStore.ts",
+      "services\\aiInstructionGenerator.ts",
+      "types\\behaviorTypes.ts"
+    ],
+    "services\\vrmModelManager.ts": [],
+    "utils\\animationBlender.ts": [
+      "types\\enhancementTypes.ts"
+    ],
+    "utils\\audioUtils.ts": [],
+    "utils\\backgroundRenderer.ts": [
+      "types\\enhancementTypes.ts"
+    ],
+    "utils\\breathingAnimator.ts": [
+      "types\\enhancementTypes.ts"
+    ],
+    "utils\\deviceDetector.ts": [],
+    "utils\\fpsCounter.ts": [],
+    "utils\\lipSyncController.ts": [
+      "types\\behaviorTypes.ts",
+      "utils\\phonemeDetector.ts",
+      "utils\\visemeMapper.ts",
+      "types\\phonemeLipSync.ts"
+    ],
+    "utils\\lodManager.ts": [],
+    "utils\\mediaCapture.ts": [
+      "types\\enhancementTypes.ts"
+    ],
+    "utils\\phonemeDetector.ts": [
+      "types\\phonemeLipSync.ts"
+    ],
+    "utils\\saccadeGenerator.ts": [
+      "types\\enhancementTypes.ts"
+    ],
+    "utils\\visemeMapper.ts": [
+      "types\\phonemeLipSync.ts"
+    ],
+    "utils\\vrmValidator.ts": [
+      "types\\enhancementTypes.ts"
+    ],
+    "utils\\walkingAnimator.ts": [
+      "types\\enhancementTypes.ts"
+    ],
+    "utils\\walkingController.ts": [
+      "types\\walkingBehaviorTypes.ts",
+      "types\\walkingBehaviorTypes.ts"
+    ],
+    "types\\behaviorTypes.ts": [],
+    "types\\enhancementTypes.ts": [],
+    "types\\phonemeLipSync.ts": [],
+    "types\\vrmConfig.ts": [],
+    "types\\walkingBehaviorTypes.ts": [],
+    "App.tsx": [
+      "types",
+      "services\\liveManager.ts",
+      "components\\NeuralCore.tsx",
+      "components\\BehaviorEditor.tsx",
+      "components\\FpsCounter.tsx",
+      "services\\conversationStore.ts",
+      "types\\vrmConfig.ts",
+      "services\\behaviorManager.ts",
+      "types\\behaviorTypes.ts",
+      "types\\walkingBehaviorTypes.ts",
+      "types\\walkingBehaviorTypes.ts",
+      "utils\\mediaCapture.ts",
+      "utils\\vrmValidator.ts",
+      "utils\\fpsCounter.ts",
+      "types\\enhancementTypes.ts"
+    ],
+    "index.tsx": [
+      "App.tsx"
+    ],
+    "types.ts": [],
+    "vite.config.ts": []
+  },
+  "reverseDependencies": {
+    "types\\behaviorTypes.ts": [
+      "components\\BehaviorEditor.tsx",
+      "components\\NeuralCore.tsx",
+      "services\\aiInstructionGenerator.ts",
+      "services\\behaviorManager.ts",
+      "services\\configLoader.ts",
+      "services\\liveManager.ts",
+      "utils\\lipSyncController.ts",
+      "App.tsx"
+    ],
+    "types\\enhancementTypes.ts": [
+      "components\\BehaviorEditor.tsx",
+      "components\\NeuralCore.tsx",
+      "utils\\animationBlender.ts",
+      "utils\\backgroundRenderer.ts",
+      "utils\\breathingAnimator.ts",
+      "utils\\mediaCapture.ts",
+      "utils\\saccadeGenerator.ts",
+      "utils\\vrmValidator.ts",
+      "utils\\walkingAnimator.ts",
+      "App.tsx"
+    ],
+    "types\\walkingBehaviorTypes.ts": [
+      "components\\BehaviorEditor.tsx",
+      "components\\NeuralCore.tsx",
+      "components\\NeuralCore.tsx",
+      "components\\WalkingEditor.tsx",
+      "components\\WalkingEditor.tsx",
+      "utils\\walkingController.ts",
+      "utils\\walkingController.ts",
+      "App.tsx",
+      "App.tsx"
+    ],
+    "utils\\backgroundRenderer.ts": [
+      "components\\BehaviorEditor.tsx"
+    ],
+    "components\\WalkingEditor.tsx": [
+      "components\\BehaviorEditor.tsx"
+    ],
+    "utils\\fpsCounter.ts": [
+      "components\\FpsCounter.tsx",
+      "App.tsx"
+    ],
+    "services\\liveManager.ts": [
+      "components\\NeuralCore.tsx",
+      "App.tsx"
+    ],
+    "types\\vrmConfig.ts": [
+      "components\\NeuralCore.tsx",
+      "App.tsx"
+    ],
+    "services\\behaviorManager.ts": [
+      "components\\NeuralCore.tsx",
+      "App.tsx"
+    ],
+    "services\\vrmModelManager.ts": [
+      "components\\NeuralCore.tsx"
+    ],
+    "utils\\lodManager.ts": [
+      "components\\NeuralCore.tsx"
+    ],
+    "utils\\deviceDetector.ts": [
+      "components\\NeuralCore.tsx"
+    ],
+    "utils\\animationBlender.ts": [
+      "components\\NeuralCore.tsx"
+    ],
+    "utils\\saccadeGenerator.ts": [
+      "components\\NeuralCore.tsx"
+    ],
+    "utils\\breathingAnimator.ts": [
+      "components\\NeuralCore.tsx"
+    ],
+    "utils\\walkingAnimator.ts": [
+      "components\\NeuralCore.tsx"
+    ],
+    "utils\\walkingController.ts": [
+      "components\\NeuralCore.tsx",
+      "components\\WalkingEditor.tsx"
+    ],
+    "utils\\lipSyncController.ts": [
+      "components\\NeuralCore.tsx"
+    ],
+    "types\\phonemeLipSync.ts": [
+      "components\\NeuralCore.tsx",
+      "utils\\lipSyncController.ts",
+      "utils\\phonemeDetector.ts",
+      "utils\\visemeMapper.ts"
+    ],
+    "services\\configLoader.ts": [
+      "services\\behaviorManager.ts"
+    ],
+    "utils\\audioUtils.ts": [
+      "services\\liveManager.ts"
+    ],
+    "services\\conversationStore.ts": [
+      "services\\liveManager.ts",
+      "App.tsx"
+    ],
+    "services\\aiInstructionGenerator.ts": [
+      "services\\liveManager.ts"
+    ],
+    "utils\\phonemeDetector.ts": [
+      "utils\\lipSyncController.ts"
+    ],
+    "utils\\visemeMapper.ts": [
+      "utils\\lipSyncController.ts"
+    ],
+    "types": [
+      "App.tsx"
+    ],
+    "components\\NeuralCore.tsx": [
+      "App.tsx"
+    ],
+    "components\\BehaviorEditor.tsx": [
+      "App.tsx"
+    ],
+    "components\\FpsCounter.tsx": [
+      "App.tsx"
+    ],
+    "utils\\mediaCapture.ts": [
+      "App.tsx"
+    ],
+    "utils\\vrmValidator.ts": [
+      "App.tsx"
+    ],
+    "App.tsx": [
+      "index.tsx"
+    ]
+  },
+  "circularDependencies": [],
+  "orphanedFiles": [
+    "types.ts",
+    "vite.config.ts"
+  ]
+}
