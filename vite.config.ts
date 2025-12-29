@@ -229,6 +229,176 @@ function behaviorStoragePlugin() {
           sendJson(res, { error: String(e) }, 500);
         }
       });
+
+      // ============ Conversation API ============
+      // GET /api/conversations/recent?limit=N - get recent messages
+      // GET /api/conversations/summary?limit=N - get conversation summary
+      // GET /api/conversations/stats - get conversation stats
+      // POST /api/conversations/message - save a message
+      // POST /api/conversations/session/start - start new session
+      // POST /api/conversations/session/:id/end - end session
+      // DELETE /api/conversations - clear all conversations
+      server.middlewares.use('/api/conversations', async (req, res, next) => {
+        if (!storageService) {
+          sendJson(res, { error: 'Storage not initialized' }, 500);
+          return;
+        }
+        
+        const url = new URL(req.url || '', 'http://localhost');
+        const urlParts = url.pathname.split('/').filter(Boolean);
+        
+        try {
+          if (req.method === 'GET') {
+            if (urlParts[0] === 'recent') {
+              const limit = parseInt(url.searchParams.get('limit') || '20');
+              const messages = storageService.getRecentMessages(limit);
+              sendJson(res, messages);
+            } else if (urlParts[0] === 'summary') {
+              const limit = parseInt(url.searchParams.get('limit') || '10');
+              const summary = storageService.getConversationSummary(limit);
+              sendJson(res, { summary });
+            } else if (urlParts[0] === 'stats') {
+              const stats = storageService.getConversationStats();
+              sendJson(res, stats);
+            } else {
+              next();
+            }
+          } else if (req.method === 'POST') {
+            if (urlParts[0] === 'message') {
+              const body = await parseBody(req);
+              const id = storageService.saveMessage(body.sessionId, body.role, body.content);
+              sendJson(res, { success: true, id });
+            } else if (urlParts[0] === 'session') {
+              if (urlParts[1] === 'start') {
+                const sessionId = storageService.startConversationSession();
+                sendJson(res, { sessionId });
+              } else if (urlParts[2] === 'end') {
+                const sessionId = urlParts[1];
+                storageService.endConversationSession(sessionId);
+                sendJson(res, { success: true });
+              } else {
+                next();
+              }
+            } else {
+              next();
+            }
+          } else if (req.method === 'DELETE') {
+            storageService.clearConversations();
+            sendJson(res, { success: true });
+          } else {
+            next();
+          }
+        } catch (e) {
+          console.error('[BehaviorStorage] Conversation error:', e);
+          sendJson(res, { error: String(e) }, 500);
+        }
+      });
+
+      // ============ VRM Config API ============
+      // GET /api/vrm-configs/:modelName - get config for model
+      // PUT /api/vrm-configs/:modelName - save config for model
+      // DELETE /api/vrm-configs/:modelName - delete config
+      server.middlewares.use('/api/vrm-configs', async (req, res, next) => {
+        if (!storageService) {
+          sendJson(res, { error: 'Storage not initialized' }, 500);
+          return;
+        }
+        
+        const urlParts = req.url?.split('/').filter(Boolean) || [];
+        const modelName = decodeURIComponent(urlParts[0] || '');
+        
+        if (!modelName) {
+          sendJson(res, { error: 'Model name required' }, 400);
+          return;
+        }
+        
+        try {
+          if (req.method === 'GET') {
+            const config = storageService.getVrmConfig(modelName);
+            sendJson(res, config || {});
+          } else if (req.method === 'PUT' || req.method === 'POST') {
+            const body = await parseBody(req);
+            storageService.saveVrmConfig(modelName, body);
+            sendJson(res, { success: true });
+          } else if (req.method === 'DELETE') {
+            storageService.deleteVrmConfig(modelName);
+            sendJson(res, { success: true });
+          } else {
+            next();
+          }
+        } catch (e) {
+          console.error('[BehaviorStorage] VRM config error:', e);
+          sendJson(res, { error: String(e) }, 500);
+        }
+      });
+
+      // ============ User Preferences API ============
+      // GET /api/preferences/:key - get preference
+      // GET /api/preferences - get all preferences
+      // PUT /api/preferences/:key - save preference
+      // DELETE /api/preferences/:key - delete preference
+      server.middlewares.use('/api/preferences', async (req, res, next) => {
+        if (!storageService) {
+          sendJson(res, { error: 'Storage not initialized' }, 500);
+          return;
+        }
+        
+        const urlParts = req.url?.split('/').filter(Boolean) || [];
+        const key = decodeURIComponent(urlParts[0] || '');
+        
+        try {
+          if (req.method === 'GET') {
+            if (key) {
+              const value = storageService.getPreference(key);
+              sendJson(res, value || {});
+            } else {
+              const all = storageService.getAllPreferences();
+              sendJson(res, all);
+            }
+          } else if (req.method === 'PUT' || req.method === 'POST') {
+            if (!key) {
+              sendJson(res, { error: 'Preference key required' }, 400);
+              return;
+            }
+            const body = await parseBody(req);
+            storageService.savePreference(key, body);
+            sendJson(res, { success: true });
+          } else if (req.method === 'DELETE') {
+            if (!key) {
+              sendJson(res, { error: 'Preference key required' }, 400);
+              return;
+            }
+            storageService.deletePreference(key);
+            sendJson(res, { success: true });
+          } else {
+            next();
+          }
+        } catch (e) {
+          console.error('[BehaviorStorage] Preferences error:', e);
+          sendJson(res, { error: String(e) }, 500);
+        }
+      });
+
+      // ============ Full Export API ============
+      // GET /api/export/all - export entire database
+      server.middlewares.use('/api/export/all', async (req, res, next) => {
+        if (!storageService) {
+          sendJson(res, { error: 'Storage not initialized' }, 500);
+          return;
+        }
+        
+        try {
+          if (req.method === 'GET') {
+            const data = storageService.exportAll();
+            sendJson(res, data);
+          } else {
+            next();
+          }
+        } catch (e) {
+          console.error('[BehaviorStorage] Export all error:', e);
+          sendJson(res, { error: String(e) }, 500);
+        }
+      });
     }
   };
 }

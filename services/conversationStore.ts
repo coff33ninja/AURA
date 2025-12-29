@@ -1,4 +1,5 @@
-// IndexedDB-based conversation storage for persistent memory
+// Conversation storage - now uses server-side SQLite via API
+// Replaces IndexedDB with persistent server storage
 
 export interface ConversationMessage {
   id?: number;
@@ -15,177 +16,154 @@ export interface ConversationSession {
   messageCount: number;
 }
 
-const DB_NAME = 'aura_conversations';
-const DB_VERSION = 1;
-const MESSAGES_STORE = 'messages';
-const SESSIONS_STORE = 'sessions';
+const API_BASE = '';
 
 class ConversationStore {
-  private db: IDBDatabase | null = null;
   private currentSessionId: string = '';
+  private initialized: boolean = false;
 
   async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onerror = () => reject(request.error);
+    if (this.initialized) return;
+    
+    try {
+      // Start a new conversation session on the server
+      const response = await fetch(`${API_BASE}/api/conversations/session/start`, {
+        method: 'POST',
+      });
       
-      request.onsuccess = () => {
-        this.db = request.result;
-        this.startNewSession();
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        // Messages store
-        if (!db.objectStoreNames.contains(MESSAGES_STORE)) {
-          const messagesStore = db.createObjectStore(MESSAGES_STORE, { 
-            keyPath: 'id', 
-            autoIncrement: true 
-          });
-          messagesStore.createIndex('sessionId', 'sessionId', { unique: false });
-          messagesStore.createIndex('timestamp', 'timestamp', { unique: false });
-        }
-
-        // Sessions store
-        if (!db.objectStoreNames.contains(SESSIONS_STORE)) {
-          const sessionsStore = db.createObjectStore(SESSIONS_STORE, { 
-            keyPath: 'id' 
-          });
-          sessionsStore.createIndex('startTime', 'startTime', { unique: false });
-        }
-      };
-    });
+      if (response.ok) {
+        const data = await response.json();
+        this.currentSessionId = data.sessionId;
+        console.log('[ConversationStore] Session started:', this.currentSessionId);
+      } else {
+        // Fallback to local session ID if server unavailable
+        this.currentSessionId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.warn('[ConversationStore] Server unavailable, using local session');
+      }
+      
+      this.initialized = true;
+    } catch (error) {
+      console.warn('[ConversationStore] Failed to init:', error);
+      this.currentSessionId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      this.initialized = true;
+    }
   }
 
   startNewSession(): string {
-    this.currentSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    if (this.db) {
-      const tx = this.db.transaction(SESSIONS_STORE, 'readwrite');
-      const store = tx.objectStore(SESSIONS_STORE);
-      store.add({
-        id: this.currentSessionId,
-        startTime: Date.now(),
-        messageCount: 0
-      });
+    // End current session if exists
+    if (this.currentSessionId && !this.currentSessionId.startsWith('local_')) {
+      fetch(`${API_BASE}/api/conversations/session/${this.currentSessionId}/end`, {
+        method: 'POST',
+      }).catch(() => {});
     }
+    
+    // Start new session
+    fetch(`${API_BASE}/api/conversations/session/start`, {
+      method: 'POST',
+    })
+      .then(res => res.json())
+      .then(data => {
+        this.currentSessionId = data.sessionId;
+        console.log('[ConversationStore] New session started:', this.currentSessionId);
+      })
+      .catch(() => {
+        this.currentSessionId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      });
     
     return this.currentSessionId;
   }
 
   async saveMessage(role: 'user' | 'assistant', content: string): Promise<void> {
-    if (!this.db || !content.trim()) return;
+    if (!content.trim()) return;
+    
+    // Ensure initialized
+    if (!this.initialized) {
+      await this.init();
+    }
 
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction([MESSAGES_STORE, SESSIONS_STORE], 'readwrite');
-      
-      // Save message
-      const messagesStore = tx.objectStore(MESSAGES_STORE);
-      messagesStore.add({
-        role,
-        content: content.trim(),
-        timestamp: Date.now(),
-        sessionId: this.currentSessionId
+    try {
+      const response = await fetch(`${API_BASE}/api/conversations/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: this.currentSessionId,
+          role,
+          content: content.trim(),
+        }),
       });
-
-      // Update session message count
-      const sessionsStore = tx.objectStore(SESSIONS_STORE);
-      const getRequest = sessionsStore.get(this.currentSessionId);
-      getRequest.onsuccess = () => {
-        const session = getRequest.result;
-        if (session) {
-          session.messageCount++;
-          session.endTime = Date.now();
-          sessionsStore.put(session);
-        }
-      };
-
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
+      
+      if (!response.ok) {
+        console.warn('[ConversationStore] Failed to save message');
+      }
+    } catch (error) {
+      console.warn('[ConversationStore] Failed to save message:', error);
+    }
   }
 
   async getRecentMessages(limit: number = 20): Promise<ConversationMessage[]> {
-    if (!this.db) return [];
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(MESSAGES_STORE, 'readonly');
-      const store = tx.objectStore(MESSAGES_STORE);
-      const index = store.index('timestamp');
+    try {
+      const response = await fetch(`${API_BASE}/api/conversations/recent?limit=${limit}`);
       
-      const messages: ConversationMessage[] = [];
-      const request = index.openCursor(null, 'prev'); // Newest first
-
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-        if (cursor && messages.length < limit) {
-          messages.push(cursor.value);
-          cursor.continue();
-        } else {
-          resolve(messages.reverse()); // Return in chronological order
-        }
-      };
-
-      request.onerror = () => reject(request.error);
-    });
+      if (!response.ok) return [];
+      
+      const messages = await response.json();
+      
+      // Convert server format to expected format
+      return messages.map((m: any) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: new Date(m.timestamp).getTime(),
+        sessionId: m.sessionId,
+      }));
+    } catch (error) {
+      console.warn('[ConversationStore] Failed to get messages:', error);
+      return [];
+    }
   }
 
   async getConversationSummary(maxMessages: number = 10): Promise<string> {
-    const messages = await this.getRecentMessages(maxMessages);
-    
-    if (messages.length === 0) {
+    try {
+      const response = await fetch(`${API_BASE}/api/conversations/summary?limit=${maxMessages}`);
+      
+      if (!response.ok) return '';
+      
+      const data = await response.json();
+      return data.summary || '';
+    } catch (error) {
+      console.warn('[ConversationStore] Failed to get summary:', error);
       return '';
     }
-
-    // Format as conversation history
-    const history = messages.map(m => {
-      const role = m.role === 'user' ? 'User' : 'Aura';
-      // Truncate long messages
-      const content = m.content.length > 200 
-        ? m.content.substring(0, 200) + '...' 
-        : m.content;
-      return `${role}: ${content}`;
-    }).join('\n');
-
-    return `[Previous conversation context]\n${history}\n[End of context]`;
   }
 
   async clearHistory(): Promise<void> {
-    if (!this.db) return;
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction([MESSAGES_STORE, SESSIONS_STORE], 'readwrite');
-      tx.objectStore(MESSAGES_STORE).clear();
-      tx.objectStore(SESSIONS_STORE).clear();
-      tx.oncomplete = () => {
-        this.startNewSession();
-        resolve();
-      };
-      tx.onerror = () => reject(tx.error);
-    });
+    try {
+      await fetch(`${API_BASE}/api/conversations`, {
+        method: 'DELETE',
+      });
+      
+      // Start a new session after clearing
+      this.startNewSession();
+    } catch (error) {
+      console.warn('[ConversationStore] Failed to clear history:', error);
+    }
   }
 
   async getStats(): Promise<{ totalMessages: number; totalSessions: number }> {
-    if (!this.db) return { totalMessages: 0, totalSessions: 0 };
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction([MESSAGES_STORE, SESSIONS_STORE], 'readonly');
+    try {
+      const response = await fetch(`${API_BASE}/api/conversations/stats`);
       
-      let totalMessages = 0;
-      let totalSessions = 0;
+      if (!response.ok) return { totalMessages: 0, totalSessions: 0 };
+      
+      return await response.json();
+    } catch (error) {
+      console.warn('[ConversationStore] Failed to get stats:', error);
+      return { totalMessages: 0, totalSessions: 0 };
+    }
+  }
 
-      const messagesCount = tx.objectStore(MESSAGES_STORE).count();
-      messagesCount.onsuccess = () => { totalMessages = messagesCount.result; };
-
-      const sessionsCount = tx.objectStore(SESSIONS_STORE).count();
-      sessionsCount.onsuccess = () => { totalSessions = sessionsCount.result; };
-
-      tx.oncomplete = () => resolve({ totalMessages, totalSessions });
-      tx.onerror = () => reject(tx.error);
-    });
+  getCurrentSessionId(): string {
+    return this.currentSessionId;
   }
 }
 

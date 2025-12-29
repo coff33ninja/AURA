@@ -118,6 +118,9 @@ function deepMerge<T extends object>(target: T, source: Partial<T>): T {
 // Config cache
 const configCache = new Map<string, VrmConfig>();
 
+// API base URL
+const API_BASE = '';
+
 // Load VRM config for a model
 export async function loadVrmConfig(modelName: string): Promise<VrmConfig> {
   // Check cache first
@@ -148,33 +151,49 @@ export async function loadVrmConfig(modelName: string): Promise<VrmConfig> {
   return defaultConfig;
 }
 
-// Save VRM config (for the pose editor)
-export function saveVrmConfigToStorage(modelName: string, config: Partial<VrmConfig>): void {
-  const storageKey = `vrm_config_${modelName}`;
-  const existing = localStorage.getItem(storageKey);
-  const existingConfig = existing ? JSON.parse(existing) : {};
-  const merged = deepMerge(existingConfig, config);
-  localStorage.setItem(storageKey, JSON.stringify(merged));
-}
-
-// Load VRM config overrides from localStorage
-export function loadVrmConfigFromStorage(modelName: string): Partial<VrmConfig> | null {
-  const storageKey = `vrm_config_${modelName}`;
-  const stored = localStorage.getItem(storageKey);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return null;
+// Save VRM config to server (async)
+export async function saveVrmConfigToStorage(modelName: string, config: Partial<VrmConfig>): Promise<void> {
+  try {
+    // Get existing config from server first
+    const existingConfig = await loadVrmConfigFromStorage(modelName) || {};
+    const merged = deepMerge(existingConfig as VrmConfig, config);
+    
+    const response = await fetch(`${API_BASE}/api/vrm-configs/${encodeURIComponent(modelName)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(merged),
+    });
+    
+    if (!response.ok) {
+      console.warn('[VrmConfig] Failed to save config to server');
     }
+  } catch (error) {
+    console.warn('[VrmConfig] Failed to save config:', error);
   }
-  return null;
 }
 
-// Get final config (file config + localStorage overrides)
+// Load VRM config overrides from server (async)
+export async function loadVrmConfigFromStorage(modelName: string): Promise<Partial<VrmConfig> | null> {
+  try {
+    const response = await fetch(`${API_BASE}/api/vrm-configs/${encodeURIComponent(modelName)}`);
+    
+    if (!response.ok) return null;
+    
+    const config = await response.json();
+    // Return null if empty object
+    if (Object.keys(config).length === 0) return null;
+    
+    return config;
+  } catch (error) {
+    console.warn('[VrmConfig] Failed to load config from server:', error);
+    return null;
+  }
+}
+
+// Get final config (file config + server overrides)
 export async function getVrmConfig(modelName: string): Promise<VrmConfig> {
   const fileConfig = await loadVrmConfig(modelName);
-  const storageOverrides = loadVrmConfigFromStorage(modelName);
+  const storageOverrides = await loadVrmConfigFromStorage(modelName);
   
   if (storageOverrides) {
     return deepMerge(fileConfig, storageOverrides);

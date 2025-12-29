@@ -5,6 +5,9 @@ import type { BackgroundConfig, SolidBackground, GradientBackground, HdriBackgro
 // Storage key for background preferences
 const STORAGE_KEY = 'aura_background_preference';
 
+// API base URL
+const API_BASE = '';
+
 /**
  * Parse a hex color string to RGB values (0-1 range)
  */
@@ -186,25 +189,37 @@ export function clearBackground(scene: any): void {
 }
 
 /**
- * Save background preference to localStorage
+ * Save background preference to server (async)
  */
-export function saveBackgroundPreference(config: BackgroundConfig): void {
+export async function saveBackgroundPreference(config: BackgroundConfig): Promise<void> {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    const response = await fetch(`${API_BASE}/api/preferences/${STORAGE_KEY}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+    
+    if (!response.ok) {
+      console.warn('Failed to save background preference to server');
+    }
   } catch (e) {
     console.warn('Failed to save background preference:', e);
   }
 }
 
 /**
- * Load background preference from localStorage
+ * Load background preference from server (async)
  */
-export function loadBackgroundPreference(): BackgroundConfig | null {
+export async function loadBackgroundPreference(): Promise<BackgroundConfig | null> {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return null;
+    const response = await fetch(`${API_BASE}/api/preferences/${STORAGE_KEY}`);
     
-    const config = JSON.parse(saved) as BackgroundConfig;
+    if (!response.ok) return null;
+    
+    const config = await response.json() as BackgroundConfig;
+    
+    // Return null if empty object
+    if (!config || Object.keys(config).length === 0) return null;
     
     // Validate the loaded config
     if (!config.type) return null;

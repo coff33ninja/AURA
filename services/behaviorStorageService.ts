@@ -27,6 +27,10 @@ export interface DatabaseStats {
   totalConfigs: number;
   totalSessions: number;
   totalChanges: number;
+  totalConversations: number;
+  totalConversationSessions: number;
+  totalVrmConfigs: number;
+  totalPreferences: number;
   configsByModel: Record<string, number>;
   dbSizeBytes: number;
 }
@@ -62,7 +66,7 @@ export class BehaviorStorageService {
         UNIQUE(model_name, behavior_type)
       );
 
-      -- User sessions for AI training
+      -- User sessions for AI training (behavior editing)
       CREATE TABLE IF NOT EXISTS sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT UNIQUE NOT NULL,
@@ -84,10 +88,52 @@ export class BehaviorStorageService {
         FOREIGN KEY (session_id) REFERENCES sessions(session_id)
       );
 
+      -- Conversation messages
+      CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+        content TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES conversation_sessions(session_id)
+      );
+
+      -- Conversation sessions
+      CREATE TABLE IF NOT EXISTS conversation_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT UNIQUE NOT NULL,
+        started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        ended_at DATETIME,
+        message_count INTEGER DEFAULT 0
+      );
+
+      -- VRM model configs (position, scale, camera, etc.)
+      CREATE TABLE IF NOT EXISTS vrm_configs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        model_name TEXT UNIQUE NOT NULL,
+        config_json TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- User preferences (background, UI settings, etc.)
+      CREATE TABLE IF NOT EXISTS user_preferences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE NOT NULL,
+        value_json TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Indexes
       CREATE INDEX IF NOT EXISTS idx_configs_model ON behavior_configs(model_name);
       CREATE INDEX IF NOT EXISTS idx_changes_session ON behavior_changes(session_id);
       CREATE INDEX IF NOT EXISTS idx_changes_timestamp ON behavior_changes(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_conversations_session ON conversations(session_id);
+      CREATE INDEX IF NOT EXISTS idx_conversations_timestamp ON conversations(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_conv_sessions_started ON conversation_sessions(started_at);
     `);
+    
+    console.log('[BehaviorStorage] SQLite database initialized');
   }
 
 
@@ -212,6 +258,223 @@ export class BehaviorStorageService {
   }
 
 
+  // ============ Conversation Storage ============
+
+  /**
+   * Start a new conversation session
+   */
+  startConversationSession(): string {
+    const sessionId = `conv_${Date.now()}_${uuidv4().substring(0, 8)}`;
+    const stmt = this.db.prepare(`
+      INSERT INTO conversation_sessions (session_id) VALUES (?)
+    `);
+    stmt.run(sessionId);
+    return sessionId;
+  }
+
+  /**
+   * End a conversation session
+   */
+  endConversationSession(sessionId: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE conversation_sessions SET ended_at = CURRENT_TIMESTAMP WHERE session_id = ?
+    `);
+    stmt.run(sessionId);
+  }
+
+  /**
+   * Save a conversation message
+   */
+  saveMessage(sessionId: string, role: 'user' | 'assistant', content: string): number {
+    const stmt = this.db.prepare(`
+      INSERT INTO conversations (session_id, role, content) VALUES (?, ?, ?)
+    `);
+    const result = stmt.run(sessionId, role, content);
+    
+    // Update message count
+    const updateStmt = this.db.prepare(`
+      UPDATE conversation_sessions 
+      SET message_count = message_count + 1, ended_at = CURRENT_TIMESTAMP 
+      WHERE session_id = ?
+    `);
+    updateStmt.run(sessionId);
+    
+    return result.lastInsertRowid as number;
+  }
+
+  /**
+   * Get recent conversation messages
+   */
+  getRecentMessages(limit: number = 20): Array<{
+    id: number;
+    sessionId: string;
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: string;
+  }> {
+    const stmt = this.db.prepare(`
+      SELECT id, session_id, role, content, timestamp 
+      FROM conversations 
+      ORDER BY timestamp DESC 
+      LIMIT ?
+    `);
+    const rows = stmt.all(limit) as Array<{
+      id: number;
+      session_id: string;
+      role: 'user' | 'assistant';
+      content: string;
+      timestamp: string;
+    }>;
+    
+    // Return in chronological order
+    return rows.reverse().map(row => ({
+      id: row.id,
+      sessionId: row.session_id,
+      role: row.role,
+      content: row.content,
+      timestamp: row.timestamp,
+    }));
+  }
+
+  /**
+   * Get conversation summary for AI context
+   */
+  getConversationSummary(maxMessages: number = 10): string {
+    const messages = this.getRecentMessages(maxMessages);
+    
+    if (messages.length === 0) {
+      return '';
+    }
+
+    const history = messages.map(m => {
+      const role = m.role === 'user' ? 'User' : 'Aura';
+      const content = m.content.length > 200 
+        ? m.content.substring(0, 200) + '...' 
+        : m.content;
+      return `${role}: ${content}`;
+    }).join('\n');
+
+    return `[Previous conversation context]\n${history}\n[End of context]`;
+  }
+
+  /**
+   * Clear all conversation history
+   */
+  clearConversations(): void {
+    this.db.exec(`
+      DELETE FROM conversations;
+      DELETE FROM conversation_sessions;
+    `);
+  }
+
+  /**
+   * Get conversation statistics
+   */
+  getConversationStats(): { totalMessages: number; totalSessions: number } {
+    const msgCount = (this.db.prepare(`SELECT COUNT(*) as count FROM conversations`).get() as { count: number }).count;
+    const sessCount = (this.db.prepare(`SELECT COUNT(*) as count FROM conversation_sessions`).get() as { count: number }).count;
+    return { totalMessages: msgCount, totalSessions: sessCount };
+  }
+
+
+  // ============ VRM Config Storage ============
+
+  /**
+   * Save VRM config for a model (upsert)
+   */
+  saveVrmConfig(modelName: string, config: object): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO vrm_configs (model_name, config_json, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(model_name) 
+      DO UPDATE SET config_json = excluded.config_json, updated_at = CURRENT_TIMESTAMP
+    `);
+    stmt.run(modelName, JSON.stringify(config));
+  }
+
+  /**
+   * Get VRM config for a model
+   */
+  getVrmConfig(modelName: string): object | null {
+    const stmt = this.db.prepare(`
+      SELECT config_json FROM vrm_configs WHERE model_name = ?
+    `);
+    const row = stmt.get(modelName) as { config_json: string } | undefined;
+    if (!row) return null;
+    try {
+      return JSON.parse(row.config_json);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Delete VRM config for a model
+   */
+  deleteVrmConfig(modelName: string): void {
+    const stmt = this.db.prepare(`DELETE FROM vrm_configs WHERE model_name = ?`);
+    stmt.run(modelName);
+  }
+
+
+  // ============ User Preferences Storage ============
+
+  /**
+   * Save a user preference
+   */
+  savePreference(key: string, value: object): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO user_preferences (key, value_json, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) 
+      DO UPDATE SET value_json = excluded.value_json, updated_at = CURRENT_TIMESTAMP
+    `);
+    stmt.run(key, JSON.stringify(value));
+  }
+
+  /**
+   * Get a user preference
+   */
+  getPreference(key: string): object | null {
+    const stmt = this.db.prepare(`
+      SELECT value_json FROM user_preferences WHERE key = ?
+    `);
+    const row = stmt.get(key) as { value_json: string } | undefined;
+    if (!row) return null;
+    try {
+      return JSON.parse(row.value_json);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Delete a user preference
+   */
+  deletePreference(key: string): void {
+    const stmt = this.db.prepare(`DELETE FROM user_preferences WHERE key = ?`);
+    stmt.run(key);
+  }
+
+  /**
+   * Get all user preferences
+   */
+  getAllPreferences(): Record<string, object> {
+    const stmt = this.db.prepare(`SELECT key, value_json FROM user_preferences`);
+    const rows = stmt.all() as Array<{ key: string; value_json: string }>;
+    
+    const result: Record<string, object> = {};
+    for (const row of rows) {
+      try {
+        result[row.key] = JSON.parse(row.value_json);
+      } catch {
+        // Skip invalid JSON
+      }
+    }
+    return result;
+  }
+
+
   // ============ Export & Admin Operations ============
 
   /**
@@ -286,6 +549,70 @@ export class BehaviorStorageService {
   }
 
   /**
+   * Export ALL data from database
+   */
+  exportAll(): {
+    exportedAt: string;
+    behaviorConfigs: Record<string, Record<string, object>>;
+    vrmConfigs: Record<string, object>;
+    preferences: Record<string, object>;
+    conversations: Array<{
+      sessionId: string;
+      startedAt: string;
+      endedAt: string | null;
+      messages: Array<{ role: string; content: string; timestamp: string }>;
+    }>;
+    trainingData: TrainingDataExport;
+  } {
+    // Get all behavior configs grouped by model
+    const behaviorConfigs: Record<string, Record<string, object>> = {};
+    const models = this.db.prepare(`SELECT DISTINCT model_name FROM behavior_configs`).all() as Array<{ model_name: string }>;
+    for (const { model_name } of models) {
+      behaviorConfigs[model_name] = this.getAllConfigs(model_name);
+    }
+
+    // Get all VRM configs
+    const vrmConfigs: Record<string, object> = {};
+    const vrmRows = this.db.prepare(`SELECT model_name, config_json FROM vrm_configs`).all() as Array<{ model_name: string; config_json: string }>;
+    for (const row of vrmRows) {
+      try {
+        vrmConfigs[row.model_name] = JSON.parse(row.config_json);
+      } catch { /* skip */ }
+    }
+
+    // Get all preferences
+    const preferences = this.getAllPreferences();
+
+    // Get all conversations with messages
+    const convSessions = this.db.prepare(`
+      SELECT session_id, started_at, ended_at FROM conversation_sessions ORDER BY started_at
+    `).all() as Array<{ session_id: string; started_at: string; ended_at: string | null }>;
+    
+    const msgStmt = this.db.prepare(`
+      SELECT role, content, timestamp FROM conversations WHERE session_id = ? ORDER BY timestamp
+    `);
+    
+    const conversations = convSessions.map(session => ({
+      sessionId: session.session_id,
+      startedAt: session.started_at,
+      endedAt: session.ended_at,
+      messages: (msgStmt.all(session.session_id) as Array<{ role: string; content: string; timestamp: string }>),
+    }));
+
+    // Get training data
+    const trainingData = this.exportTrainingData();
+
+    return {
+      exportedAt: new Date().toISOString(),
+      behaviorConfigs,
+      vrmConfigs,
+      preferences,
+      conversations,
+      trainingData,
+    };
+  }
+
+  /**
    * Clear all data for a model
    */
   clearModel(modelName: string): void {
@@ -303,6 +630,10 @@ export class BehaviorStorageService {
       DELETE FROM behavior_changes;
       DELETE FROM sessions;
       DELETE FROM behavior_configs;
+      DELETE FROM conversations;
+      DELETE FROM conversation_sessions;
+      DELETE FROM vrm_configs;
+      DELETE FROM user_preferences;
     `);
   }
 
@@ -313,6 +644,10 @@ export class BehaviorStorageService {
     const configCount = (this.db.prepare(`SELECT COUNT(*) as count FROM behavior_configs`).get() as { count: number }).count;
     const sessionCount = (this.db.prepare(`SELECT COUNT(*) as count FROM sessions`).get() as { count: number }).count;
     const changeCount = (this.db.prepare(`SELECT COUNT(*) as count FROM behavior_changes`).get() as { count: number }).count;
+    const convCount = (this.db.prepare(`SELECT COUNT(*) as count FROM conversations`).get() as { count: number }).count;
+    const convSessionCount = (this.db.prepare(`SELECT COUNT(*) as count FROM conversation_sessions`).get() as { count: number }).count;
+    const vrmConfigCount = (this.db.prepare(`SELECT COUNT(*) as count FROM vrm_configs`).get() as { count: number }).count;
+    const prefCount = (this.db.prepare(`SELECT COUNT(*) as count FROM user_preferences`).get() as { count: number }).count;
     
     const modelCounts = this.db.prepare(`
       SELECT model_name, COUNT(*) as count FROM behavior_configs GROUP BY model_name
@@ -335,6 +670,10 @@ export class BehaviorStorageService {
       totalConfigs: configCount,
       totalSessions: sessionCount,
       totalChanges: changeCount,
+      totalConversations: convCount,
+      totalConversationSessions: convSessionCount,
+      totalVrmConfigs: vrmConfigCount,
+      totalPreferences: prefCount,
       configsByModel,
       dbSizeBytes,
     };

@@ -1,7 +1,7 @@
 // BehaviorEditor - Visual editor for VRM behavior configurations
 // Provides tabbed interface for editing transform, expressions, gestures, idle, lipsync, reactions
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   BehaviorType,
   ModelBehaviors,
@@ -2212,11 +2212,32 @@ function BackgroundTab({
   config?: BackgroundConfig;
   onChange?: (config: BackgroundConfig) => void;
 }) {
+  // State for loaded config
+  const [loadedConfig, setLoadedConfig] = useState<BackgroundConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(!config);
+  
   // Load saved preference on mount if no config provided
-  const currentConfig = config || loadBackgroundPreference() || { type: 'solid' as const, color: '#000000' };
+  useEffect(() => {
+    if (!config) {
+      setIsLoading(true);
+      loadBackgroundPreference()
+        .then((saved) => {
+          setLoadedConfig(saved || { type: 'solid' as const, color: '#000000' });
+        })
+        .catch(() => {
+          setLoadedConfig({ type: 'solid' as const, color: '#000000' });
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [config]);
+  
+  const currentConfig = config || loadedConfig || { type: 'solid' as const, color: '#000000' };
   
   const handleChange = useCallback((newConfig: BackgroundConfig) => {
-    saveBackgroundPreference(newConfig);
+    setLoadedConfig(newConfig);
+    saveBackgroundPreference(newConfig); // Fire and forget
     onChange?.(newConfig);
   }, [onChange]);
 
