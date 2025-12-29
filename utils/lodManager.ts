@@ -198,6 +198,50 @@ export function createLodConfig(thresholds: number[]): LodConfig {
 }
 
 /**
+ * Create a LOD configuration optimized for the device's capabilities
+ * 
+ * @param isMobile - Whether the device is mobile
+ * @param isLowEnd - Whether the device is low-end
+ * @returns A LOD configuration optimized for the device
+ */
+export function createDeviceOptimizedLodConfig(isMobile: boolean = false, isLowEnd: boolean = false): LodConfig {
+  // Desktop: standard LOD at normal distances
+  if (!isMobile && !isLowEnd) {
+    return DEFAULT_LOD_CONFIG;
+  }
+
+  // Low-end device: much more aggressive, earlier quality drops
+  if (isLowEnd) {
+    return {
+      enabled: true,
+      thresholds: [0.5, 1.5, 3],
+      levels: [
+        { distance: 0, shadowQuality: 'medium', particleMultiplier: 0.5 },
+        { distance: 0.5, shadowQuality: 'low', particleMultiplier: 0.3 },
+        { distance: 1.5, shadowQuality: 'none', particleMultiplier: 0.15 },
+        { distance: 3, shadowQuality: 'none', particleMultiplier: 0.1 },
+      ],
+    };
+  }
+
+  // Mobile device: more aggressive than desktop, less than low-end
+  if (isMobile) {
+    return {
+      enabled: true,
+      thresholds: [1, 3, 6],
+      levels: [
+        { distance: 0, shadowQuality: 'high', particleMultiplier: 0.8 },
+        { distance: 1, shadowQuality: 'medium', particleMultiplier: 0.5 },
+        { distance: 3, shadowQuality: 'low', particleMultiplier: 0.25 },
+        { distance: 6, shadowQuality: 'none', particleMultiplier: 0.1 },
+      ],
+    };
+  }
+
+  return DEFAULT_LOD_CONFIG;
+}
+
+/**
  * Interpolate between two LOD levels for smooth transitions
  * 
  * @param from - Starting LOD level
