@@ -4,7 +4,6 @@ import { spawn } from 'child_process';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import https from 'https';
 
 // Load environment variables from .env.local
 const envPath = path.join(process.cwd(), '.env.local');
@@ -29,8 +28,6 @@ const viteProcess = spawn('npm', ['run', 'dev:local'], {
 
 // Wait a moment for Vite to start, then start ngrok
 setTimeout(() => {
-  const ngrokArgs = ['http', '3000'];
-  
   if (ngrokAuthToken) {
     console.log('\n🔑 Configuring ngrok with auth token from .env.local...\n');
     const authProcess = spawn('ngrok', ['config', 'add-authtoken', ngrokAuthToken], {
@@ -54,25 +51,25 @@ setTimeout(() => {
   }
   
   function startNgrok() {
-    const ngrokProcess = spawn('ngrok', ngrokArgs, {
-      stdio: 'pipe',
+    console.log('🌐 Starting ngrok tunnel...\n');
+    const ngrokProcess = spawn('ngrok', ['http', '3000', '--log=stdout'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
       shell: true,
     });
 
-    let ngrokOutput = '';
+    let urlFound = false;
 
     ngrokProcess.stdout.on('data', (data) => {
       const output = data.toString();
-      ngrokOutput += output;
-      
-      // Print all ngrok output
-      process.stdout.write(output);
+      console.log(output);
       
       // Extract and display the public URL
-      const urlMatch = output.match(/Forwarding\s+(\S+)\s+->\s+http:\/\/localhost:3000/);
-      if (urlMatch && urlMatch[1]) {
-        const publicUrl = urlMatch[1];
-        setTimeout(() => {
+      if (!urlFound && output.includes('Forwarding')) {
+        const urlMatch = output.match(/Forwarding\s+(\S+)\s+->/);
+        if (urlMatch && urlMatch[1]) {
+          urlFound = true;
+          const publicUrl = urlMatch[1];
+          
           console.log('\n');
           console.log('╔════════════════════════════════════════════════════════════════╗');
           console.log('║                    🌍 NGROK TUNNEL ACTIVE 🌍                    ║');
@@ -82,17 +79,24 @@ setTimeout(() => {
           console.log('║ Share this link with anyone to access your AURA bot remotely! ║');
           console.log('╚════════════════════════════════════════════════════════════════╝');
           console.log('\n');
-        }, 100);
+        }
       }
     });
 
     ngrokProcess.stderr.on('data', (data) => {
-      process.stderr.write(data);
+      console.error('ngrok error:', data.toString());
     });
 
     ngrokProcess.on('close', (code) => {
       console.log('\n❌ ngrok exited with code', code);
       process.exit(code);
+    });
+
+    ngrokProcess.on('error', (err) => {
+      console.error('\n❌ Failed to start ngrok:', err.message);
+      console.error('\nMake sure ngrok is installed globally:');
+      console.error('  npm install -g ngrok\n');
+      process.exit(1);
     });
   }
 }, 3000);
