@@ -63,22 +63,25 @@ setTimeout(() => {
       const output = data.toString();
       console.log(output);
       
-      // Extract and display the public URL
-      if (!urlFound && output.includes('Forwarding')) {
-        const urlMatch = output.match(/Forwarding\s+(\S+)\s+->/);
+      // Extract and display the public URL from ngrok logs
+      if (!urlFound) {
+        // Match both old format "Forwarding" and new log format "url="
+        const urlMatch = output.match(/url=(https:\/\/[a-zA-Z0-9\.\-]+\.ngrok[a-zA-Z0-9\.\-]*\.app)/);
         if (urlMatch && urlMatch[1]) {
           urlFound = true;
           const publicUrl = urlMatch[1];
           
-          console.log('\n');
-          console.log('╔════════════════════════════════════════════════════════════════╗');
-          console.log('║                    🌍 NGROK TUNNEL ACTIVE 🌍                    ║');
-          console.log('╠════════════════════════════════════════════════════════════════╣');
-          console.log(`║ Public URL: ${publicUrl.padEnd(50)} ║`);
-          console.log('║                                                                ║');
-          console.log('║ Share this link with anyone to access your AURA bot remotely! ║');
-          console.log('╚════════════════════════════════════════════════════════════════╝');
-          console.log('\n');
+          setTimeout(() => {
+            console.log('\n');
+            console.log('╔════════════════════════════════════════════════════════════════╗');
+            console.log('║                    🌍 NGROK TUNNEL ACTIVE 🌍                    ║');
+            console.log('╠════════════════════════════════════════════════════════════════╣');
+            console.log(`║ Public URL: ${publicUrl.padEnd(50)} ║`);
+            console.log('║                                                                ║');
+            console.log('║ Share this link with anyone to access your AURA bot remotely! ║');
+            console.log('╚════════════════════════════════════════════════════════════════╝');
+            console.log('\n');
+          }, 100);
         }
       }
     });
