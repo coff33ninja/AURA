@@ -48,6 +48,7 @@ export interface NeuralCoreHandle {
   startWalking: () => void;
   stopWalking: () => void;
   isWalking: () => boolean;
+  setBoneRotation: (boneName: string, rotation: { x: number; y: number; z: number }) => void;
 }
 
 interface NeuralCoreProps {
@@ -788,6 +789,9 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     isWalking: () => {
       return isCurrentlyWalking();
     },
+    setBoneRotation: (boneName: string, rotation: { x: number; y: number; z: number }) => {
+      boneTargets.current[boneName] = rotation;
+    },
   }), [playGesture, triggerEmotion]);
 
   useEffect(() => {
@@ -1019,6 +1023,7 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         for (const gesture of behaviors.gestures.gestures) {
           gesturesMapRef.current.set(gesture.name, gesture);
         }
+        console.log('[NeuralCore] Gestures updated:', behaviors.gestures.gestures.map(g => g.name));
       } else if (type === 'reactions') {
         reactionsMapRef.current.clear();
         for (const reaction of behaviors.reactions.reactions) {

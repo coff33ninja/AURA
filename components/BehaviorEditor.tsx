@@ -34,6 +34,7 @@ interface BehaviorEditorProps {
   onPreviewGesture: (gestureName: string) => void;
   onPreviewExpression: (expressionName: string, value: number) => void;
   onPreviewReaction: (reactionName: string) => void;
+  onSetBoneRotation?: (boneName: string, rotation: { x: number; y: number; z: number }) => void;
   onExport: () => void;
   onImport: (file: File) => void;
   onSave: () => void;
@@ -72,6 +73,7 @@ export function BehaviorEditor({
   onPreviewGesture,
   onPreviewExpression,
   onPreviewReaction,
+  onSetBoneRotation,
   onExport,
   onImport,
   onSave,
@@ -220,6 +222,7 @@ export function BehaviorEditor({
                   config={behaviors.gestures}
                   onChange={handleGesturesChange}
                   onPreview={onPreviewGesture}
+                  onSetBoneRotation={onSetBoneRotation}
                 />
               )}
               {activeTab === 'idle' && (
@@ -747,10 +750,12 @@ function GesturesTab({
   config,
   onChange,
   onPreview,
+  onSetBoneRotation,
 }: {
   config: GesturesConfig;
   onChange: (config: Partial<GesturesConfig>) => void;
   onPreview: (name: string) => void;
+  onSetBoneRotation?: (boneName: string, rotation: { x: number; y: number; z: number }) => void;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newGestureName, setNewGestureName] = useState('');
@@ -793,15 +798,22 @@ function GesturesTab({
     const gestures = [...config.gestures];
     const gesture = gestures[index];
     const currentBone = gesture.bones[boneName] || { x: 0, y: 0, z: 0 };
+    const newBone = { ...currentBone, [axis]: value };
     gestures[index] = {
       ...gesture,
       bones: {
         ...gesture.bones,
-        [boneName]: { ...currentBone, [axis]: value },
+        [boneName]: newBone,
       },
     };
+    console.log(`[GesturesTab] Updating ${gesture.name}.${boneName}.${axis} = ${value}`, newBone);
     onChange({ gestures });
-  }, [config.gestures, onChange]);
+    
+    // Live preview - apply bone rotation immediately
+    if (onSetBoneRotation) {
+      onSetBoneRotation(boneName, newBone);
+    }
+  }, [config.gestures, onChange, onSetBoneRotation]);
 
   const editingGesture = editingIndex !== null ? config.gestures[editingIndex] : null;
 
@@ -900,6 +912,7 @@ function GesturesTab({
                   <div className="text-[9px] text-gray-400 mt-2">Arm Bones</div>
                   {['leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm'].map((boneName) => {
                     const bone = gesture.bones[boneName] || { x: 0, y: 0, z: 0 };
+                    const isLowerArm = boneName.includes('Lower');
                     return (
                       <div key={boneName} className="pl-1">
                         <span className="text-[8px] text-gray-500">{boneName}</span>
@@ -907,18 +920,69 @@ function GesturesTab({
                           <Slider
                             label="X"
                             value={bone.x}
-                            min={-1.5}
-                            max={1.5}
+                            min={-3}
+                            max={3}
                             step={0.1}
                             onChange={(v) => updateGestureBone(index, boneName, 'x', v)}
                           />
                         </div>
                         <div className="flex gap-1">
                           <Slider
+                            label="Y"
+                            value={bone.y}
+                            min={-3}
+                            max={3}
+                            step={0.1}
+                            onChange={(v) => updateGestureBone(index, boneName, 'y', v)}
+                          />
+                        </div>
+                        <div className="flex gap-1">
+                          <Slider
                             label="Z"
                             value={bone.z}
-                            min={-1.5}
-                            max={1.5}
+                            min={-3}
+                            max={3}
+                            step={0.1}
+                            onChange={(v) => updateGestureBone(index, boneName, 'z', v)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Hand Bones */}
+                  <div className="text-[9px] text-gray-400 mt-2">Hand Bones</div>
+                  {['leftHand', 'rightHand'].map((boneName) => {
+                    const bone = gesture.bones[boneName] || { x: 0, y: 0, z: 0 };
+                    return (
+                      <div key={boneName} className="pl-1">
+                        <span className="text-[8px] text-gray-500">{boneName}</span>
+                        <div className="flex gap-1">
+                          <Slider
+                            label="X"
+                            value={bone.x}
+                            min={-3.14}
+                            max={3.14}
+                            step={0.1}
+                            onChange={(v) => updateGestureBone(index, boneName, 'x', v)}
+                          />
+                        </div>
+                        <div className="flex gap-1">
+                          <Slider
+                            label="Y"
+                            value={bone.y}
+                            min={-3.14}
+                            max={3.14}
+                            step={0.1}
+                            onChange={(v) => updateGestureBone(index, boneName, 'y', v)}
+                          />
+                        </div>
+                        <div className="flex gap-1">
+                          <Slider
+                            label="Z"
+                            value={bone.z}
+                            min={-3.14}
+                            max={3.14}
                             step={0.1}
                             onChange={(v) => updateGestureBone(index, boneName, 'z', v)}
                           />

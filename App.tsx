@@ -217,6 +217,10 @@ const App: React.FC = () => {
   const handlePreviewReaction = useCallback((reactionName: string) => {
     neuralCoreRef.current?.previewReaction(reactionName);
   }, []);
+
+  const handleSetBoneRotation = useCallback((boneName: string, rotation: { x: number; y: number; z: number }) => {
+    neuralCoreRef.current?.setBoneRotation(boneName, rotation);
+  }, []);
   
   // Walking control handlers
   const handleWalkingChange = useCallback((config: Partial<WalkingBehaviorConfig>) => {
@@ -671,6 +675,7 @@ const App: React.FC = () => {
               onPreviewGesture={handlePreviewGesture}
               onPreviewExpression={handlePreviewExpression}
               onPreviewReaction={handlePreviewReaction}
+              onSetBoneRotation={handleSetBoneRotation}
               onClose={() => setBehaviorEditorOpen(false)}
               onExport={() => {
                 // Export current behaviors as JSON file
