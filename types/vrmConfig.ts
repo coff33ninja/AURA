@@ -69,8 +69,8 @@ export const DEFAULT_VRM_CONFIG: VrmConfig = {
     offsetY: 0,
   },
   defaultPose: {
-    leftUpperArm: { x: 0, y: 0, z: 0.5 },
-    rightUpperArm: { x: 0, y: 0, z: -0.5 },
+    leftUpperArm: { x: 0, y: 0, z: 1.222 },  // 70 degrees in radians (arms down)
+    rightUpperArm: { x: 0, y: 0, z: -1.222 },  // -70 degrees in radians
   },
   camera: {
     distance: 2.0,

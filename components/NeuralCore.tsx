@@ -950,6 +950,53 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
         phonemeDetection: behaviors.lipsync.phonemeDetection,
       });
       
+      // Apply body config to bone targets immediately when behaviors load
+      // This ensures arms are positioned correctly even if VRM loaded first
+      if (behaviors.body) {
+        const bodyConfig = behaviors.body;
+        const degToRad = (deg: number) => (deg * Math.PI) / 180;
+        
+        boneTargets.current.leftUpperArm = {
+          x: degToRad(bodyConfig.leftUpperArm.x),
+          y: degToRad(bodyConfig.leftUpperArm.y),
+          z: degToRad(bodyConfig.leftUpperArm.z),
+        };
+        boneTargets.current.rightUpperArm = {
+          x: degToRad(bodyConfig.rightUpperArm.x),
+          y: degToRad(bodyConfig.rightUpperArm.y),
+          z: degToRad(bodyConfig.rightUpperArm.z),
+        };
+        boneTargets.current.leftLowerArm = {
+          x: degToRad(bodyConfig.leftLowerArm.x),
+          y: degToRad(bodyConfig.leftLowerArm.y),
+          z: degToRad(bodyConfig.leftLowerArm.z),
+        };
+        boneTargets.current.rightLowerArm = {
+          x: degToRad(bodyConfig.rightLowerArm.x),
+          y: degToRad(bodyConfig.rightLowerArm.y),
+          z: degToRad(bodyConfig.rightLowerArm.z),
+        };
+        boneTargets.current.spine = {
+          x: degToRad(bodyConfig.spine.x),
+          y: degToRad(bodyConfig.spine.y),
+          z: degToRad(bodyConfig.spine.z),
+        };
+        boneTargets.current.chest = {
+          x: degToRad(bodyConfig.chest.x),
+          y: degToRad(bodyConfig.chest.y),
+          z: degToRad(bodyConfig.chest.z),
+        };
+        
+        // Update eye tracking settings
+        cameraTrackingRef.current.enabled = bodyConfig.eyeTracking.enabled;
+        cameraTrackingRef.current.intensity = bodyConfig.eyeTracking.intensity;
+        
+        console.log('[NeuralCore] Applied body config from behaviors:', {
+          leftArm: bodyConfig.leftUpperArm,
+          rightArm: bodyConfig.rightUpperArm
+        });
+      }
+      
       console.log('[NeuralCore] Loaded behaviors for', modelBaseName, {
         gestures: gesturesMapRef.current.size,
         reactions: reactionsMapRef.current.size,

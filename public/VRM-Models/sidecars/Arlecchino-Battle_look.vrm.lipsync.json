@@ -8,5 +8,11 @@
     "e": 0.3,
     "o": 0.6
   },
-  "preset": "normal"
+  "preset": "normal",
+  "phonemeDetection": {
+    "enabled": false,
+    "minConfidence": 0.3,
+    "transitionDuration": 50,
+    "intensityMultiplier": 1
+  }
 }
