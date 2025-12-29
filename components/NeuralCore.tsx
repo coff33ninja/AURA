@@ -9,7 +9,7 @@ import {
   onBehaviorChanged 
 } from '../services/behaviorManager';
 import { getGlobalVrmModelManager } from '../services/vrmModelManager';
-import { calculateLodLevel, applyLodSettings, shouldUpdateLod, DEFAULT_LOD_CONFIG, type LodLevel } from '../utils/lodManager';
+import { calculateLodLevel, applyLodSettings, shouldUpdateLod, DEFAULT_LOD_CONFIG, createDeviceOptimizedLodConfig, type LodLevel, type LodConfig } from '../utils/lodManager';
 import { detectDeviceCapabilities, getOptimalParticleCount } from '../utils/deviceDetector';
 import type { 
   ModelBehaviors,
@@ -77,6 +77,7 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
   const lightsRef = useRef<THREE.Light[]>([]);
   const currentLodLevelRef = useRef<LodLevel | null>(null);
   const baseParticleCountRef = useRef<number>(150); // Base particle count for LOD scaling
+  const lodConfigRef = useRef<LodConfig>(DEFAULT_LOD_CONFIG); // Device-aware LOD configuration
   
   // State for loading
   const [isLoading, setIsLoading] = useState(true);
@@ -831,7 +832,11 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
     const baseParticleCount = 150;
     const particleCount = getOptimalParticleCount(baseParticleCount, deviceCaps);
     baseParticleCountRef.current = particleCount;
-    console.log(`[NeuralCore] Device: ${deviceCaps.isMobile ? 'Mobile' : 'Desktop'}, Particles: ${particleCount}/${baseParticleCount}`);
+    
+    // Create device-optimized LOD configuration
+    lodConfigRef.current = createDeviceOptimizedLodConfig(deviceCaps.isMobile, deviceCaps.isLowEnd);
+    
+    console.log(`[NeuralCore] Device: ${deviceCaps.isMobile ? 'Mobile' : 'Desktop'} (LOD Level: ${deviceCaps.recommendedLod}), Particles: ${particleCount}/${baseParticleCount}`);
     
     const particleGeo = new THREE.BufferGeometry();
     const posArray = new Float32Array(particleCount * 3);
@@ -1598,7 +1603,7 @@ export const NeuralCore = forwardRef<NeuralCoreHandle, NeuralCoreProps>(({ volum
           if (vrmRef.current && sceneRef.current) {
             const vrmPosition = vrmRef.current.scene.position;
             const cameraDistance = cam.position.distanceTo(vrmPosition);
-            const newLodLevel = calculateLodLevel(cameraDistance, DEFAULT_LOD_CONFIG);
+            const newLodLevel = calculateLodLevel(cameraDistance, lodConfigRef.current);
             
             // Only apply LOD changes if level changed significantly
             if (!currentLodLevelRef.current || shouldUpdateLod(currentLodLevelRef.current, newLodLevel)) {
