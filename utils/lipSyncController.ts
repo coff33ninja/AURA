@@ -42,16 +42,17 @@ export class LipSyncController {
 
   constructor(config: Partial<LipSyncControllerConfig> = {}) {
     // Merge with defaults
+    // Note: visemeWeights are intentionally lower for natural-looking speech
     this.config = {
       sensitivity: config.sensitivity ?? 4.0,
       smoothing: config.smoothing ?? 0.3,
-      visemeWeights: config.visemeWeights ?? { a: 0.8, i: 0.3, u: 0.25, e: 0.3, o: 0.6 },
+      visemeWeights: config.visemeWeights ?? { a: 0.5, i: 0.25, u: 0.2, e: 0.25, o: 0.4 },
       preset: config.preset ?? 'normal',
       phonemeDetection: {
         enabled: config.phonemeDetection?.enabled ?? false,
         minConfidence: config.phonemeDetection?.minConfidence ?? 0.3,
         transitionDuration: config.phonemeDetection?.transitionDuration ?? 50,
-        intensityMultiplier: config.phonemeDetection?.intensityMultiplier ?? 1.0,
+        intensityMultiplier: config.phonemeDetection?.intensityMultiplier ?? 0.7,
       },
     };
 

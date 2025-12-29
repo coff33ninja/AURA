@@ -389,21 +389,40 @@ Fires: Coordinated expression + posture + gesture + gaze + idle + mode
    - Note: Self-signed certificate may need approval on mobile browser
 
    **Access from phone remotely (outside network):**
-   Install and use ngrok to expose your dev server:
-   ```bash
-   # Install ngrok globally (once)
-   npm install -g ngrok
    
-   # Set up ngrok authentication (one-time setup)
+   The `npm run dev` command automatically starts an ngrok tunnel. You just need to install ngrok first:
+
+   ```bash
+   # Option 1: Install as project dependency (recommended)
+   npm install ngrok
+
+   # Option 2: Install globally via npm
+   npm install -g ngrok
+
+   # Option 3: Install via Chocolatey (Windows)
+   choco install ngrok
+
+   # Option 4: Download directly from https://ngrok.com/download
+   ```
+
+   Then set up ngrok authentication (one-time setup):
+   ```bash
    # 1. Create free account at https://dashboard.ngrok.com/signup
    # 2. Get your auth token from https://dashboard.ngrok.com/auth/your-authtoken
-   # 3. Run:
-   ngrok config add-authtoken YOUR_AUTH_TOKEN_HERE
+   # 3. Add to your .env.local file:
+   NGROK_AUTH_TOKEN=your_token_here
+   ```
+
+   Now `npm run dev` will automatically create a public tunnel and display the URL.
    
-   # In another terminal, expose your dev server
+   If you prefer manual control, you can run the dev server and ngrok separately:
+   ```bash
+   # Terminal 1: Start dev server only
+   npm run dev:local
+   
+   # Terminal 2: Start ngrok manually
    ngrok http 3000
    ```
-   Then share the generated ngrok URL (e.g., `https://xxxxx-xx-xxx-xxx-xx.ngrok.io`) with anyone to access from their phone or computer.
 
 5. **Build for production:**
    ```bash

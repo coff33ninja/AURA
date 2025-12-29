@@ -102,10 +102,12 @@ export interface VisemeMapperConfig {
 
 /**
  * Default VisemeMapper configuration
+ * Note: baseWeights are intentionally lower for natural-looking speech.
+ * The 'a' viseme (open mouth) is reduced to prevent exaggerated mouth opening.
  */
 export const DEFAULT_VISEME_MAPPER_CONFIG: VisemeMapperConfig = {
-  intensityMultiplier: 1.0,
-  baseWeights: { a: 0.8, i: 0.3, u: 0.25, e: 0.3, o: 0.6 },
+  intensityMultiplier: 0.7,
+  baseWeights: { a: 0.5, i: 0.25, u: 0.2, e: 0.25, o: 0.4 },
 };
 
 /**
