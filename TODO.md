@@ -1,5 +1,21 @@
 # AURA - TODO & Improvements
 
+## ✅ Recently Completed (Tasks 19-20)
+
+### Walking Controls Editor
+- [x] Created `types/walkingBehaviorTypes.ts` with WalkingStyle, WalkingDirection, LegConfig, ArmSwingConfig, WalkingBehaviorConfig
+- [x] Created `utils/walkingController.ts` with calculateLegPose(), calculateArmSwingPose(), getWalkingPreset(), applyWalkingStyle()
+- [x] Property tests for walking controller (Properties 18, 19, 20) - 35 tests passing
+- [x] Created `components/WalkingEditor.tsx` with full UI for walking controls
+- [x] Added Walking tab to BehaviorEditor
+- [x] Integrated walking controls into NeuralCore with real-time preview
+- [x] Omnidirectional walking with custom angle (0-360°)
+- [x] Depth movement (toward/away from camera)
+- [x] "Face Direction" mode - walk in the direction the model is facing
+- [x] Walking style presets (casual, march, sneak, run)
+- [x] Leg animation with stride, lift height, knee bend controls
+- [x] Arm swing with enable toggle and intensity
+
 ## 🔴 High Priority
 
 ### Dynamic Model Height/Camera Setup
@@ -32,12 +48,12 @@
 ### VRM Loading
 - [x] Handle VRM load errors gracefully with user feedback
 - [x] Add loading progress indicator (percentage)
-- [ ] Preload next/previous models for faster switching
+- [x] Lazy load VRM models with LRU caching (services/vrmModelManager.ts)
 - [x] Clean up previous VRM properly on model switch (dispose geometries/materials)
 
 ### UI/UX
 - [x] Move inline styles to CSS classes (volume bar heights)
-- [x] Add keyboard shortcuts (Space to connect/disconnect, Esc to close menu)
+- [x] Add keyboard shortcuts (Space to connect/disconnect, Esc to close menu, D for debug/FPS)
 - [x] Remember user preferences in localStorage (selected model, voice, personality, mode)
 - [x] Add fullscreen toggle
 - [x] Mobile responsive adjustments
@@ -48,23 +64,24 @@
 - [x] Add text chat fallback when mic unavailable
 - [x] Display AI response text (with commands stripped) as subtitles
 - [x] Conversation memory with IndexedDB storage
-- [ ] Add screenshot/recording functionality
-- [ ] Support custom VRM upload
-- [ ] Add background scene options (solid color, gradient, environment maps)
+- [x] Add screenshot/recording functionality (utils/mediaCapture.ts)
+- [x] Support custom VRM upload with validation (utils/vrmValidator.ts)
+- [x] Add background scene options - solid color, gradient, HDRI (utils/backgroundRenderer.ts, Background tab)
 - [x] Implement actual finger bone control for gestures - BehaviorEditor Hands tab with 28 finger bones
 
 ### Animation System
-- [ ] Add more idle animations variety
-- [ ] Implement animation blending/crossfade
-- [ ] Add procedural eye movement (saccades)
-- [ ] Breathing should affect spine bones, not just expressions
-- [ ] Walking animation needs vertical bobbing
+- [x] Add more idle animations variety with timing variation (utils/idleAnimation.ts)
+- [x] Implement animation blending/crossfade (utils/animationBlender.ts)
+- [x] Add procedural eye movement/saccades (utils/saccadeGenerator.ts)
+- [x] Breathing affects spine bones (utils/breathingAnimator.ts)
+- [x] Walking animation with vertical bobbing (utils/walkingAnimator.ts)
+- [x] Full walking controls with leg/arm animation (utils/walkingController.ts)
 
 ### Performance
-- [ ] Lazy load VRM models
-- [ ] Implement LOD (Level of Detail) for distant camera positions
-- [ ] Optimize particle system (reduce count on mobile)
-- [ ] Add FPS counter in debug mode
+- [x] Lazy load VRM models with caching (services/vrmModelManager.ts)
+- [x] Implement LOD system for distance-based quality (utils/lodManager.ts)
+- [x] Optimize particle system - reduce count on mobile (utils/deviceDetector.ts)
+- [x] Add FPS counter in debug mode (utils/fpsCounter.ts, components/FpsCounter.tsx)
 
 ### Production Readiness
 - [ ] Add proper error boundaries
@@ -99,3 +116,26 @@
 - [x] Move emotion choreography to separate config file - BehaviorManager + JSON configs
 - [x] Create proper TypeScript interfaces for sidecar JSON structure - types/behaviorTypes.ts
 - [ ] Centralize magic numbers (camera positions, animation speeds, etc.)
+
+## 📊 Test Coverage
+
+- **285 tests passing** across 19 test files
+- Property-based tests using fast-check for:
+  - Screenshot capture (Property 1)
+  - VRM validation (Property 2)
+  - Config generation (Property 3)
+  - Gradient textures (Property 4)
+  - Background persistence (Property 5)
+  - Finger bone gestures (Properties 6, 7)
+  - Idle presets (Properties 8, 9)
+  - Animation blending (Property 10)
+  - Saccade generation (Property 11)
+  - Breathing animation (Property 12)
+  - Walking bob (Property 13)
+  - Model caching (Property 14)
+  - LOD system (Property 15)
+  - Mobile optimization (Property 16)
+  - FPS color coding (Property 17)
+  - Leg pose alternation (Property 18)
+  - Arm swing opposition (Property 19)
+  - Walking presets (Property 20)
