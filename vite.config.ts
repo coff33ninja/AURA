@@ -53,12 +53,11 @@ export default defineConfig(({ mode }) => {
         allowedHosts: [
           'localhost',
           '127.0.0.1',
-          '100.64.100.11',
-          '169.254.95.241',
-          '10.0.0.101',
           '.ngrok.io',
-          '.ngrok-free.app'
+          '.ngrok-free.app',
+          '.ngrok-pro.app'
         ],
+        middlewareMode: false,
       },
       plugins: [react(), vrmModelsPlugin()],
       define: {
