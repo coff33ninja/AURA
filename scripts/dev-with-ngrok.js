@@ -4,6 +4,7 @@ import { spawn } from 'child_process';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import https from 'https';
 
 // Load environment variables from .env.local
 const envPath = path.join(process.cwd(), '.env.local');
@@ -54,8 +55,39 @@ setTimeout(() => {
   
   function startNgrok() {
     const ngrokProcess = spawn('ngrok', ngrokArgs, {
-      stdio: 'inherit',
+      stdio: 'pipe',
       shell: true,
+    });
+
+    let ngrokOutput = '';
+
+    ngrokProcess.stdout.on('data', (data) => {
+      const output = data.toString();
+      ngrokOutput += output;
+      
+      // Print all ngrok output
+      process.stdout.write(output);
+      
+      // Extract and display the public URL
+      const urlMatch = output.match(/Forwarding\s+(\S+)\s+->\s+http:\/\/localhost:3000/);
+      if (urlMatch && urlMatch[1]) {
+        const publicUrl = urlMatch[1];
+        setTimeout(() => {
+          console.log('\n');
+          console.log('╔════════════════════════════════════════════════════════════════╗');
+          console.log('║                    🌍 NGROK TUNNEL ACTIVE 🌍                    ║');
+          console.log('╠════════════════════════════════════════════════════════════════╣');
+          console.log(`║ Public URL: ${publicUrl.padEnd(50)} ║`);
+          console.log('║                                                                ║');
+          console.log('║ Share this link with anyone to access your AURA bot remotely! ║');
+          console.log('╚════════════════════════════════════════════════════════════════╝');
+          console.log('\n');
+        }, 100);
+      }
+    });
+
+    ngrokProcess.stderr.on('data', (data) => {
+      process.stderr.write(data);
     });
 
     ngrokProcess.on('close', (code) => {
