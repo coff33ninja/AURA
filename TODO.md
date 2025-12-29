@@ -18,6 +18,20 @@
 
 ## 🔴 High Priority
 
+### Gesture Editor Finger Controls (IN PROGRESS)
+- [ ] Refactor finger bone section in GesturesTab to match HandsTab design pattern:
+  - Use Left/Right hand selector buttons (like HandsTab)
+  - Add expandable finger sections (Thumb, Index, Middle, Ring, Little)
+  - Each finger expands to show bone sliders (Proximal, Intermediate, Distal)
+  - Use the standard `Slider` component (NOT raw HTML range inputs)
+  - Add finger presets (open, fist, point, peace, grip, thumbsUp) for quick setup
+  - Keep "+ Add Right/Left Hand Fingers" buttons to initialize finger bones
+- [ ] Ensure live preview works for finger bones (already wired via `updateGestureBone` → `onSetBoneRotation`)
+- Reference: HandsTab implementation at line ~1840-2100 in BehaviorEditor.tsx
+- Current broken implementation uses raw HTML inputs with color-coded accents - needs full rewrite
+
+## 🔴 High Priority (continued)
+
 ### Dynamic Model Height/Camera Setup
 - [x] Compute bounding box on VRM load via `THREE.Box3().setFromObject(vrm.scene)`
 - [x] Lower model Y position if height exceeds threshold (keep scale for walking)
