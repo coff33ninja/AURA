@@ -394,6 +394,12 @@ Fires: Coordinated expression + posture + gesture + gaze + idle + mode
    # Install ngrok globally (once)
    npm install -g ngrok
    
+   # Set up ngrok authentication (one-time setup)
+   # 1. Create free account at https://dashboard.ngrok.com/signup
+   # 2. Get your auth token from https://dashboard.ngrok.com/auth/your-authtoken
+   # 3. Run:
+   ngrok config add-authtoken YOUR_AUTH_TOKEN_HERE
+   
    # In another terminal, expose your dev server
    ngrok http 3000
    ```
