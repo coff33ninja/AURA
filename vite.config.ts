@@ -50,8 +50,9 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        allowedHosts: ['*.ngrok.io', '*.ngrok-free.app', 'localhost', '127.0.0.1'],
       },
-      plugins: [react(), basicSsl(), vrmModelsPlugin()],
+      plugins: [react(), vrmModelsPlugin()],
       define: {
         'process.env.GEMINI_API_KEYS': JSON.stringify(env.GEMINI_API_KEYS || '')
       },
