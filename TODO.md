@@ -124,9 +124,24 @@
 
 ### File Size Crisis (URGENT)
 Current line counts are unsustainable:
-- `BehaviorEditor.tsx` - **2391 lines** 
-- `NeuralCore.tsx` - **1861 lines**
-- `App.tsx` - **1303 lines**
+- `BehaviorEditor.tsx` - **2512 lines** (15 functions, easiest to split)
+- `NeuralCore.tsx` - **1938 lines** (1 monolithic component)
+- `App.tsx` - **1369 lines** (1 monolithic component)
+
+**Spec created:** `.kiro/specs/component-splitting/`
+**Helper script:** `node scripts/split-component.mjs`
+
+Quick start:
+```bash
+# Analyze a file to see functions and sizes
+node scripts/split-component.mjs analyze components/BehaviorEditor.tsx
+
+# Extract a function to new file (includes all imports)
+node scripts/split-component.mjs extract-function components/BehaviorEditor.tsx Slider components/behavior-editor/shared/Slider.tsx
+
+# Create barrel export for directory
+node scripts/split-component.mjs create-barrel components/behavior-editor/shared
+```
 
 #### BehaviorEditor.tsx Split Plan:
 - [ ] `components/behavior-editor/index.tsx` - Main container, tab navigation
