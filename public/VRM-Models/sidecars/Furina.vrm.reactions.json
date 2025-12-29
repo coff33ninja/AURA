@@ -18,8 +18,8 @@
       ],
       "posture": "defensive",
       "lookAt": {
-        "x": -0.5,
-        "y": 0.1,
+        "x": 0.5,
+        "y": -0.1,
         "z": 0
       },
       "duration": 3,
@@ -44,7 +44,7 @@
       "posture": "anxious",
       "lookAt": {
         "x": 0,
-        "y": -0.8,
+        "y": 0.8,
         "z": 0
       },
       "duration": 3,
@@ -85,8 +85,8 @@
       ],
       "posture": "thoughtful",
       "lookAt": {
-        "x": 0.3,
-        "y": 0.2,
+        "x": -0.3,
+        "y": -0.2,
         "z": 0
       },
       "duration": 3,
@@ -111,7 +111,7 @@
       "posture": "joy",
       "lookAt": {
         "x": 0,
-        "y": 0.3,
+        "y": -0.3,
         "z": 0
       },
       "duration": 3,
@@ -131,8 +131,8 @@
       ],
       "posture": "thoughtful",
       "lookAt": {
-        "x": -0.2,
-        "y": -0.3,
+        "x": 0.2,
+        "y": 0.3,
         "z": 0
       },
       "duration": 3,
@@ -156,7 +156,7 @@
       ],
       "posture": "anxious",
       "lookAt": {
-        "x": -0.3,
+        "x": 0.3,
         "y": 0,
         "z": 0
       },
@@ -181,8 +181,8 @@
       ],
       "posture": "confident",
       "lookAt": {
-        "x": 0.2,
-        "y": -0.2,
+        "x": -0.2,
+        "y": 0.2,
         "z": 0
       },
       "duration": 3,
@@ -207,7 +207,7 @@
       "posture": "engaged",
       "lookAt": {
         "x": 0,
-        "y": 0.4,
+        "y": -0.4,
         "z": 0
       },
       "duration": 3,
