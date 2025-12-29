@@ -2,12 +2,12 @@
   "leftUpperArm": {
     "x": 0,
     "y": 0,
-    "z": 70
+    "z": -70
   },
   "rightUpperArm": {
     "x": 0,
     "y": 0,
-    "z": -70
+    "z": 70
   },
   "leftLowerArm": {
     "x": 0,

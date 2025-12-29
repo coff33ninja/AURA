@@ -330,8 +330,8 @@ export const DEFAULT_TRANSFORM: TransformConfig = {
 };
 
 export const DEFAULT_BODY: BodyConfig = {
-  leftUpperArm: { x: 0, y: 0, z: 70 },  // degrees - arms down at sides
-  rightUpperArm: { x: 0, y: 0, z: -70 },
+  leftUpperArm: { x: 0, y: 0, z: -70 },  // degrees - arms down at sides
+  rightUpperArm: { x: 0, y: 0, z: 70 },
   leftLowerArm: { x: 0, y: 0, z: 0 },
   rightLowerArm: { x: 0, y: 0, z: 0 },
   leftHand: { x: 0, y: 0, z: 0 },
