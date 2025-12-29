@@ -137,6 +137,7 @@ function extractFunction(sourcePath, functionName, destPath) {
   let endLine = -1;
   let braceCount = 0;
   let inFunction = false;
+  let wasExported = false;
   
   const functionStartRegex = new RegExp(`^(export\\s+)?(async\\s+)?function\\s+${functionName}\\b|^(export\\s+)?const\\s+${functionName}\\s*[:=]`);
   
@@ -147,6 +148,7 @@ function extractFunction(sourcePath, functionName, destPath) {
       startLine = i;
       inFunction = true;
       braceCount = 0;
+      wasExported = line.trimStart().startsWith('export');
     }
     
     if (inFunction) {
@@ -166,15 +168,50 @@ function extractFunction(sourcePath, functionName, destPath) {
   }
   
   // Extract the function code
-  const functionCode = lines.slice(startLine, endLine + 1).join('\n');
+  let functionCode = lines.slice(startLine, endLine + 1).join('\n');
   
-  // Get all imports from source file
+  // Add export if not already exported
+  if (!wasExported) {
+    functionCode = 'export ' + functionCode;
+  }
+  
+  // Get ONLY import statements from source file (stop at first non-import)
   const imports = [];
-  for (const line of lines) {
-    if (line.startsWith('import ')) {
-      imports.push(line);
+  let inImport = false;
+  let currentImport = '';
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    
+    // Skip comments and empty lines at start
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
+      continue;
     }
-    if (line.startsWith('export ') || (line.trim() && !line.startsWith('import ') && !line.startsWith('//'))) {
+    
+    // Check if this is start of import
+    if (trimmed.startsWith('import ') || trimmed.startsWith('import{')) {
+      inImport = true;
+      currentImport = line;
+      
+      // Check if import ends on same line (has 'from' and ends with ; or quote)
+      if (line.includes(' from ') && (line.endsWith(';') || line.endsWith("';") || line.endsWith('";'))) {
+        imports.push(currentImport);
+        inImport = false;
+        currentImport = '';
+      }
+    } else if (inImport) {
+      // Continue multi-line import
+      currentImport += '\n' + line;
+      
+      // Check if import ends (line has 'from' with quotes, or ends with semicolon after quote)
+      if ((line.includes("from '") || line.includes('from "')) && line.includes(';')) {
+        imports.push(currentImport);
+        inImport = false;
+        currentImport = '';
+      }
+    } else if (trimmed.startsWith('interface ') || trimmed.startsWith('type ') || trimmed.startsWith('const ') || trimmed.startsWith('function ') || trimmed.startsWith('export ')) {
+      // We've hit actual code, stop collecting imports
       break;
     }
   }
@@ -186,11 +223,30 @@ function extractFunction(sourcePath, functionName, destPath) {
     log(`Created directory: ${destDir}`, 'green');
   }
   
+  // Adjust import paths - convert relative imports to correct depth for tabs folder
+  const adjustedImports = imports.map(imp => {
+    return imp
+      .replace(/from\s+['"]\.\.\/types\//g, "from '../../../types/")
+      .replace(/from\s+['"]\.\.\/utils\//g, "from '../../../utils/")
+      .replace(/from\s+['"]\.\.\/services\//g, "from '../../../services/")
+      .replace(/from\s+['"]\.\/WalkingEditor['"]/g, "from '../../WalkingEditor'");
+  });
+  
+  // Add React import if not present and function uses JSX
+  const hasReactImport = adjustedImports.some(imp => imp.includes("from 'react'") || imp.includes('from "react"'));
+  const needsReact = functionCode.includes('<') && functionCode.includes('/>');
+  
+  let reactImport = '';
+  if (needsReact && !hasReactImport) {
+    reactImport = "import React, { useState, useCallback } from 'react';\n";
+  }
+  
   // Build the new file content
   const newContent = `// Extracted from ${sourcePath}
 // TODO: Remove unused imports after verification
 
-${imports.join('\n')}
+${reactImport}${adjustedImports.join('\n')}
+import { Slider, Toggle, SectionHeader } from '../shared';
 
 ${functionCode}
 `;
@@ -199,11 +255,12 @@ ${functionCode}
   log(`\n✅ Extracted ${functionName} to ${destPath}`, 'green');
   log(`   Lines: ${endLine - startLine + 1}`, 'gray');
   log(`   Source lines: ${startLine + 1}-${endLine + 1}`, 'gray');
+  log(`   Export added: ${!wasExported}`, 'gray');
+  log(`   Imports found: ${imports.length}`, 'gray');
   log(`\n⚠️  Next steps:`, 'yellow');
   log(`   1. Remove unused imports from ${destPath}`, 'gray');
-  log(`   2. Add export if needed`, 'gray');
-  log(`   3. Update imports in ${sourcePath}`, 'gray');
-  log(`   4. Remove original function from ${sourcePath}`, 'gray');
+  log(`   2. Update imports in ${sourcePath}`, 'gray');
+  log(`   3. Remove original function from ${sourcePath}`, 'gray');
 }
 
 /**
