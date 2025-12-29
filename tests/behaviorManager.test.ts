@@ -77,8 +77,8 @@ describe('Property 5: Config Persistence Round-Trip', () => {
           // Update with custom values
           updateBehavior('transform', { rotation, scale });
           
-          // Save to storage
-          saveToStorage(modelName);
+          // Save to storage (now async)
+          await saveToStorage(modelName);
           
           // Reset and reload
           resetManager();
@@ -104,11 +104,11 @@ describe('Property 5: Config Persistence Round-Trip', () => {
 
   it('clearStorage removes saved data', async () => {
     await loadModelBehaviors('TestModel');
-    saveToStorage('TestModel');
+    await saveToStorage('TestModel');
     
     expect(loadFromStorage('TestModel')).not.toBeNull();
     
-    clearStorage('TestModel');
+    await clearStorage('TestModel');
     
     expect(loadFromStorage('TestModel')).toBeNull();
   });

@@ -3,6 +3,7 @@ import fs from 'fs';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import { BehaviorStorageService } from './services/behaviorStorageService';
 
 // Plugin to serve VRM model list dynamically
 function vrmModelsPlugin() {
@@ -40,6 +41,198 @@ function vrmModelsPlugin() {
   };
 }
 
+// Plugin for SQLite-based behavior storage API
+function behaviorStoragePlugin() {
+  let storageService: BehaviorStorageService | null = null;
+  
+  return {
+    name: 'behavior-storage-api',
+    configureServer(server) {
+      // Initialize storage service
+      storageService = new BehaviorStorageService();
+      console.log('[BehaviorStorage] SQLite database initialized');
+      
+      // Helper to parse JSON body
+      const parseBody = (req): Promise<any> => {
+        return new Promise((resolve, reject) => {
+          let body = '';
+          req.on('data', chunk => body += chunk);
+          req.on('end', () => {
+            try {
+              resolve(body ? JSON.parse(body) : {});
+            } catch (e) {
+              reject(e);
+            }
+          });
+          req.on('error', reject);
+        });
+      };
+      
+      // Helper to send JSON response
+      const sendJson = (res, data, status = 200) => {
+        res.statusCode = status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(data));
+      };
+      
+      // GET /api/behaviors/:modelName - get all configs for a model
+      // GET /api/behaviors/:modelName/:behaviorType - get specific config
+      server.middlewares.use('/api/behaviors', async (req, res, next) => {
+        if (!storageService) {
+          sendJson(res, { error: 'Storage not initialized' }, 500);
+          return;
+        }
+        
+        const urlParts = req.url?.split('/').filter(Boolean) || [];
+        const modelName = urlParts[0];
+        const behaviorType = urlParts[1];
+        
+        if (!modelName) {
+          sendJson(res, { error: 'Model name required' }, 400);
+          return;
+        }
+        
+        try {
+          if (req.method === 'GET') {
+            if (behaviorType) {
+              const config = storageService.getConfig(modelName, behaviorType);
+              sendJson(res, config || {});
+            } else {
+              const configs = storageService.getAllConfigs(modelName);
+              sendJson(res, configs);
+            }
+          } else if (req.method === 'PUT' || req.method === 'POST') {
+            if (!behaviorType) {
+              sendJson(res, { error: 'Behavior type required for PUT' }, 400);
+              return;
+            }
+            const body = await parseBody(req);
+            storageService.saveConfig(modelName, behaviorType, body);
+            sendJson(res, { success: true });
+          } else if (req.method === 'DELETE') {
+            if (behaviorType) {
+              storageService.deleteConfig(modelName, behaviorType);
+            } else {
+              storageService.deleteConfig(modelName);
+            }
+            sendJson(res, { success: true });
+          } else {
+            next();
+          }
+        } catch (e) {
+          console.error('[BehaviorStorage] Error:', e);
+          sendJson(res, { error: String(e) }, 500);
+        }
+      });
+      
+      // POST /api/sessions/start - start a new session
+      // POST /api/sessions/:sessionId/end - end a session
+      // POST /api/sessions/:sessionId/log - log a behavior change
+      server.middlewares.use('/api/sessions', async (req, res, next) => {
+        if (!storageService) {
+          sendJson(res, { error: 'Storage not initialized' }, 500);
+          return;
+        }
+        
+        const urlParts = req.url?.split('/').filter(Boolean) || [];
+        
+        try {
+          if (req.method === 'POST') {
+            if (urlParts.length === 0 || urlParts[0] === 'start') {
+              // Start new session
+              const body = await parseBody(req);
+              const sessionId = storageService.startSession(body.metadata);
+              sendJson(res, { sessionId });
+            } else if (urlParts.length >= 2) {
+              const sessionId = urlParts[0];
+              const action = urlParts[1];
+              
+              if (action === 'end') {
+                storageService.endSession(sessionId);
+                sendJson(res, { success: true });
+              } else if (action === 'log') {
+                const body = await parseBody(req);
+                storageService.logChange(
+                  sessionId,
+                  body.modelName,
+                  body.behaviorType,
+                  body.context || '',
+                  body.oldValue || {},
+                  body.newValue || {}
+                );
+                sendJson(res, { success: true });
+              } else {
+                next();
+              }
+            } else {
+              next();
+            }
+          } else {
+            next();
+          }
+        } catch (e) {
+          console.error('[BehaviorStorage] Session error:', e);
+          sendJson(res, { error: String(e) }, 500);
+        }
+      });
+      
+      // GET /api/export/training - export training data
+      // POST /api/export/sidecars/:modelName - export to sidecar files
+      server.middlewares.use('/api/export', async (req, res, next) => {
+        if (!storageService) {
+          sendJson(res, { error: 'Storage not initialized' }, 500);
+          return;
+        }
+        
+        const urlParts = req.url?.split('/').filter(Boolean) || [];
+        
+        try {
+          if (urlParts[0] === 'training' && req.method === 'GET') {
+            const data = storageService.exportTrainingData();
+            sendJson(res, data);
+          } else if (urlParts[0] === 'sidecars' && urlParts[1] && req.method === 'POST') {
+            const modelName = urlParts[1];
+            const sidecarsDir = path.join(process.cwd(), 'public', 'VRM-Models', 'sidecars');
+            storageService.exportToSidecars(modelName, sidecarsDir);
+            sendJson(res, { success: true, message: `Exported configs for ${modelName}` });
+          } else {
+            next();
+          }
+        } catch (e) {
+          console.error('[BehaviorStorage] Export error:', e);
+          sendJson(res, { error: String(e) }, 500);
+        }
+      });
+      
+      // POST /api/admin/clear - clear database
+      // GET /api/admin/stats - get database stats
+      server.middlewares.use('/api/admin', async (req, res, next) => {
+        if (!storageService) {
+          sendJson(res, { error: 'Storage not initialized' }, 500);
+          return;
+        }
+        
+        const urlParts = req.url?.split('/').filter(Boolean) || [];
+        
+        try {
+          if (urlParts[0] === 'clear' && req.method === 'POST') {
+            storageService.clearAll();
+            sendJson(res, { success: true, message: 'Database cleared' });
+          } else if (urlParts[0] === 'stats' && req.method === 'GET') {
+            const stats = storageService.getStats();
+            sendJson(res, stats);
+          } else {
+            next();
+          }
+        } catch (e) {
+          console.error('[BehaviorStorage] Admin error:', e);
+          sendJson(res, { error: String(e) }, 500);
+        }
+      });
+    }
+  };
+}
+
 export default defineConfig(({ mode }) => {
     // Load env from current directory, with empty prefix to get all vars
     const env = loadEnv(mode, process.cwd(), '');
@@ -59,7 +252,7 @@ export default defineConfig(({ mode }) => {
         ],
         middlewareMode: false,
       },
-      plugins: [react(), vrmModelsPlugin()],
+      plugins: [react(), vrmModelsPlugin(), behaviorStoragePlugin()],
       define: {
         'process.env.GEMINI_API_KEYS': JSON.stringify(env.GEMINI_API_KEYS || '')
       },

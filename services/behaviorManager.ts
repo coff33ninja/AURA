@@ -1,5 +1,6 @@
 // BehaviorManager Service - Central coordinator for VRM behaviors
 // Handles loading, updating, persisting, and exporting behavior configs
+// Now uses SQLite via API instead of localStorage
 
 import {
   BehaviorType,
@@ -7,7 +8,6 @@ import {
   ModelBehaviors,
   ValidationResult,
   deepMergeConfig,
-  createDefaultModelBehaviors,
   isValidTransformConfig,
   isValidBodyConfig,
   isValidHandsConfig,
@@ -18,10 +18,13 @@ import {
   isValidReactionsConfig,
   isValidExpressionsConfig,
 } from '../types/behaviorTypes';
-import { loadAllConfigs, clearModelCache } from './configLoader';
+import { loadAllConfigs } from './configLoader';
 
 // Current loaded behaviors
 let currentBehaviors: ModelBehaviors | null = null;
+
+// Current session ID for tracking changes
+let currentSessionId: string | null = null;
 
 // Event callbacks
 type BehaviorsLoadedCallback = (behaviors: ModelBehaviors) => void;
@@ -30,26 +33,163 @@ type BehaviorChangedCallback = (type: BehaviorType, config: BehaviorConfigs[Beha
 let onBehaviorsLoadedCallbacks: BehaviorsLoadedCallback[] = [];
 let onBehaviorChangedCallbacks: BehaviorChangedCallback[] = [];
 
-// Storage key prefix
+// Storage key prefix (for localStorage fallback)
 const STORAGE_PREFIX = 'vrm-behaviors:';
 
+// API base URL (empty for same-origin)
+const API_BASE = '';
+
 /**
- * Get storage key for a model
+ * Get storage key for a model (localStorage fallback)
  */
 function getStorageKey(modelName: string): string {
   return `${STORAGE_PREFIX}${modelName}`;
 }
 
+// ============ API Methods ============
+
+/**
+ * Save behavior config to server
+ */
+async function saveToServer(modelName: string, behaviorType: string, config: object): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/api/behaviors/${modelName}/${behaviorType}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+    return response.ok;
+  } catch (error) {
+    console.warn('[BehaviorManager] Failed to save to server:', error);
+    return false;
+  }
+}
+
+/**
+ * Load behavior configs from server
+ */
+async function loadFromServer(modelName: string): Promise<Partial<ModelBehaviors> | null> {
+  try {
+    const response = await fetch(`${API_BASE}/api/behaviors/${modelName}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    // Return null if empty object
+    if (Object.keys(data).length === 0) return null;
+    return data;
+  } catch (error) {
+    console.warn('[BehaviorManager] Failed to load from server:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear behavior configs on server
+ */
+async function clearServerStorage(modelName: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/api/behaviors/${modelName}`, {
+      method: 'DELETE',
+    });
+    return response.ok;
+  } catch (error) {
+    console.warn('[BehaviorManager] Failed to clear server storage:', error);
+    return false;
+  }
+}
+
+/**
+ * Start a new session for tracking behavior changes
+ */
+export async function startSession(metadata?: object): Promise<string | null> {
+  try {
+    const response = await fetch(`${API_BASE}/api/sessions/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metadata }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    currentSessionId = data.sessionId;
+    console.log('[BehaviorManager] Session started:', currentSessionId);
+    return currentSessionId;
+  } catch (error) {
+    console.warn('[BehaviorManager] Failed to start session:', error);
+    return null;
+  }
+}
+
+/**
+ * End the current session
+ */
+export async function endSession(): Promise<boolean> {
+  if (!currentSessionId) return false;
+  try {
+    const response = await fetch(`${API_BASE}/api/sessions/${currentSessionId}/end`, {
+      method: 'POST',
+    });
+    if (response.ok) {
+      console.log('[BehaviorManager] Session ended:', currentSessionId);
+      currentSessionId = null;
+    }
+    return response.ok;
+  } catch (error) {
+    console.warn('[BehaviorManager] Failed to end session:', error);
+    return false;
+  }
+}
+
+/**
+ * Log a behavior change to the current session
+ */
+export async function logBehaviorChange(
+  modelName: string,
+  behaviorType: string,
+  context: string,
+  oldValue: object,
+  newValue: object
+): Promise<boolean> {
+  if (!currentSessionId) return false;
+  try {
+    const response = await fetch(`${API_BASE}/api/sessions/${currentSessionId}/log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modelName, behaviorType, context, oldValue, newValue }),
+    });
+    return response.ok;
+  } catch (error) {
+    console.warn('[BehaviorManager] Failed to log change:', error);
+    return false;
+  }
+}
+
+/**
+ * Get current session ID
+ */
+export function getCurrentSessionId(): string | null {
+  return currentSessionId;
+}
+
 /**
  * Load behaviors for a model
- * Merges file configs with localStorage overrides
+ * Merges file configs (sidecars) with server DB overrides
+ * Falls back to localStorage if server unavailable
  */
 export async function loadModelBehaviors(modelName: string): Promise<ModelBehaviors> {
-  // Load from config files
+  // Load from config files (sidecars - these are the defaults)
   const fileBehaviors = await loadAllConfigs(modelName);
   
-  // Load localStorage overrides
-  const storageOverrides = loadFromStorage(modelName);
+  // Try to load overrides from server first
+  let storageOverrides = await loadFromServer(modelName);
+  
+  // Fall back to localStorage if server unavailable
+  if (storageOverrides === null) {
+    storageOverrides = loadFromStorage(modelName);
+    if (storageOverrides) {
+      console.log('[BehaviorManager] Using localStorage fallback for', modelName);
+    }
+  } else {
+    console.log('[BehaviorManager] Loaded overrides from server for', modelName);
+  }
   
   // Merge storage overrides on top of file configs
   if (storageOverrides) {
@@ -112,19 +252,34 @@ export function updateBehavior<T extends BehaviorType>(
 }
 
 /**
- * Save current behaviors to localStorage
+ * Save current behaviors to server (and localStorage as fallback)
  */
-export function saveToStorage(modelName: string): void {
+export async function saveToStorage(modelName: string): Promise<void> {
   if (!currentBehaviors) {
     throw new Error('No behaviors loaded. Call loadModelBehaviors first.');
   }
   
+  const types: BehaviorType[] = ['transform', 'body', 'hands', 'facial', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
+  
+  // Save each behavior type to server
+  let serverSuccess = true;
+  for (const type of types) {
+    const config = currentBehaviors[type];
+    const success = await saveToServer(modelName, type, config);
+    if (!success) serverSuccess = false;
+  }
+  
+  // Also save to localStorage as fallback
   try {
     const key = getStorageKey(modelName);
     const data = JSON.stringify(currentBehaviors);
     localStorage.setItem(key, data);
   } catch (error) {
     console.warn('Failed to save behaviors to localStorage:', error);
+  }
+  
+  if (serverSuccess) {
+    console.log('[BehaviorManager] Saved to server:', modelName);
   }
 }
 
@@ -144,15 +299,74 @@ export function loadFromStorage(modelName: string): Partial<ModelBehaviors> | nu
 }
 
 /**
- * Clear localStorage for a model
+ * Clear storage for a model (server and localStorage)
  */
-export function clearStorage(modelName: string): void {
+export async function clearStorage(modelName: string): Promise<void> {
+  // Clear server storage
+  await clearServerStorage(modelName);
+  
+  // Clear localStorage
   try {
     const key = getStorageKey(modelName);
     localStorage.removeItem(key);
   } catch (error) {
     console.warn('Failed to clear localStorage:', error);
   }
+}
+
+/**
+ * Clear ALL behavior caches (server and localStorage)
+ * Call this from browser console: window.clearAllBehaviorCaches()
+ */
+export async function clearAllBehaviorCaches(): Promise<number> {
+  let cleared = 0;
+  
+  // Clear server database
+  try {
+    const response = await fetch(`${API_BASE}/api/admin/clear`, { method: 'POST' });
+    if (response.ok) {
+      console.log('[BehaviorManager] Cleared server database');
+      cleared++;
+    }
+  } catch (error) {
+    console.warn('Failed to clear server database:', error);
+  }
+  
+  // Clear localStorage
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    for (const key of keysToRemove) {
+      localStorage.removeItem(key);
+      cleared++;
+    }
+    // Also clear vrm config caches
+    const configKeysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('vrm_config_')) {
+        configKeysToRemove.push(key);
+      }
+    }
+    for (const key of configKeysToRemove) {
+      localStorage.removeItem(key);
+      cleared++;
+    }
+    console.log(`[BehaviorManager] Cleared ${cleared} cached behavior entries`);
+  } catch (error) {
+    console.warn('Failed to clear behavior caches:', error);
+  }
+  return cleared;
+}
+
+// Expose to window for console access
+if (typeof window !== 'undefined') {
+  (window as any).clearAllBehaviorCaches = clearAllBehaviorCaches;
 }
 
 /**
@@ -320,4 +534,105 @@ export function resetManager(): void {
  */
 export function setBehaviors(behaviors: ModelBehaviors): void {
   currentBehaviors = behaviors;
+}
+
+
+// ============ Migration from localStorage ============
+
+/**
+ * Check if there's localStorage data that needs migration
+ */
+export function hasLocalStorageData(): boolean {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_PREFIX)) {
+        return true;
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+  return false;
+}
+
+/**
+ * Get all model names that have localStorage data
+ */
+export function getLocalStorageModelNames(): string[] {
+  const models: string[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_PREFIX)) {
+        const modelName = key.substring(STORAGE_PREFIX.length);
+        models.push(modelName);
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+  return models;
+}
+
+/**
+ * Migrate localStorage data to server database
+ * Returns number of models migrated
+ */
+export async function migrateLocalStorageToServer(): Promise<{ migrated: number; failed: string[] }> {
+  const models = getLocalStorageModelNames();
+  let migrated = 0;
+  const failed: string[] = [];
+  
+  for (const modelName of models) {
+    try {
+      const data = loadFromStorage(modelName);
+      if (!data) continue;
+      
+      // Save each behavior type to server
+      const types: BehaviorType[] = ['transform', 'body', 'hands', 'facial', 'expressions', 'gestures', 'idle', 'lipsync', 'reactions'];
+      let allSuccess = true;
+      
+      for (const type of types) {
+        const config = data[type];
+        if (config) {
+          const success = await saveToServer(modelName, type, config as object);
+          if (!success) allSuccess = false;
+        }
+      }
+      
+      if (allSuccess) {
+        // Clear localStorage for this model after successful migration
+        const key = getStorageKey(modelName);
+        localStorage.removeItem(key);
+        migrated++;
+        console.log(`[BehaviorManager] Migrated ${modelName} to server`);
+      } else {
+        failed.push(modelName);
+      }
+    } catch (error) {
+      console.warn(`[BehaviorManager] Failed to migrate ${modelName}:`, error);
+      failed.push(modelName);
+    }
+  }
+  
+  return { migrated, failed };
+}
+
+/**
+ * Auto-migrate localStorage data on first load
+ * Call this once when the app starts
+ */
+export async function autoMigrateIfNeeded(): Promise<void> {
+  if (!hasLocalStorageData()) return;
+  
+  console.log('[BehaviorManager] Found localStorage data, attempting migration...');
+  const result = await migrateLocalStorageToServer();
+  
+  if (result.migrated > 0) {
+    console.log(`[BehaviorManager] Successfully migrated ${result.migrated} model(s) to server`);
+  }
+  if (result.failed.length > 0) {
+    console.warn(`[BehaviorManager] Failed to migrate: ${result.failed.join(', ')}`);
+  }
 }

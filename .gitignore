@@ -27,3 +27,6 @@ dist-ssr
 #Ignore vscode AI rules
 .github\instructions\codacy.instructions.md
 .kiro
+
+# SQLite database
+data/
