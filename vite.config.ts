@@ -50,7 +50,15 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
-        allowedHosts: ['*.ngrok.io', '*.ngrok-free.app', 'localhost', '127.0.0.1'],
+        allowedHosts: [
+          'localhost',
+          '127.0.0.1',
+          '100.64.100.11',
+          '169.254.95.241',
+          '10.0.0.101',
+          '.ngrok.io',
+          '.ngrok-free.app'
+        ],
       },
       plugins: [react(), vrmModelsPlugin()],
       define: {
