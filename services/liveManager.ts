@@ -53,6 +53,23 @@ export class LiveManager {
   private analyser: AnalyserNode | null = null;
   private gainNode: GainNode | null = null;
 
+  // Audio buffer queue for smooth playback
+  private audioBufferQueue: Float32Array[] = [];
+  private pendingSamples: number = 0;
+  private isPlayingQueue: boolean = false;
+  private readonly SAMPLE_RATE = 24000;
+  
+  // Adaptive buffering
+  private minBufferSamples = 24000 * 0.1; // Start with 100ms minimum buffer
+  private readonly MAX_BUFFER_SAMPLES = 24000 * 0.3; // Max 300ms buffer
+  private readonly MIN_BUFFER_FLOOR = 24000 * 0.08; // Never go below 80ms
+  private bufferUnderrunCount = 0;
+  
+  // Sequence tracking to prevent duplicate playback
+  private audioSequenceNumber = 0;
+  private lastScheduledSequence = -1;
+  private scheduledEndTime = 0; // Track when scheduled audio will end
+
   // State
   private nextStartTime = 0;
   private currentMicVolume = 0;
@@ -209,6 +226,23 @@ export class LiveManager {
   private cleanupWithoutReconnect() {
     // Clean up resources without triggering reconnect
     this.visualizerActive = false;
+
+    // Clear audio buffer queue and timers
+    if (this.audioIdleTimeout) {
+      clearTimeout(this.audioIdleTimeout);
+      this.audioIdleTimeout = null;
+    }
+    this.audioBufferQueue = [];
+    this.pendingSamples = 0;
+    this.isPlayingQueue = false;
+    this.audioChunksReceived = 0;
+    
+    // Reset sequence tracking
+    this.audioSequenceNumber = 0;
+    this.lastScheduledSequence = -1;
+    this.scheduledEndTime = 0;
+    this.bufferUnderrunCount = 0;
+    this.minBufferSamples = 24000 * 0.1;
 
     if (this.workletNode) {
       this.workletNode.disconnect();
@@ -814,20 +848,141 @@ ${this.personalityInstruction ? `\nPERSONALITY: ${this.personalityInstruction}` 
   private scheduleAudio(buffer: AudioBuffer) {
     if (!this.outputAudioContext || !this.gainNode) return;
 
-    let startAt = this.nextStartTime;
-    const now = this.outputAudioContext.currentTime;
+    // Assign sequence number to this chunk
+    const chunkSequence = this.audioSequenceNumber++;
 
-    // If we've fallen behind, catch up with minimal gap to avoid stuttering
-    if (startAt < now) {
-      startAt = now + 0.01; // Reduced from 0.05 to minimize gaps
+    // Extract Float32 data and add to queue with sequence info
+    const channelData = buffer.getChannelData(0);
+    const chunk = new Float32Array(channelData);
+    this.audioBufferQueue.push(chunk);
+    this.pendingSamples += chunk.length;
+
+    // Flush when we have enough samples accumulated
+    if (this.pendingSamples >= this.minBufferSamples) {
+      this.flushAudioQueue();
+    }
+    
+    // Reset the idle timer - we received new audio
+    this.resetAudioIdleTimer();
+  }
+
+  private audioIdleTimeout: NodeJS.Timeout | null = null;
+  private audioChunksReceived: number = 0;
+
+  private resetAudioIdleTimer() {
+    this.audioChunksReceived++;
+    
+    // Clear existing timer
+    if (this.audioIdleTimeout) {
+      clearTimeout(this.audioIdleTimeout);
+    }
+    
+    // If no audio for 400ms, flush remaining and stop
+    this.audioIdleTimeout = setTimeout(() => {
+      this.finalFlushAndStop();
+    }, 400);
+  }
+
+  private finalFlushAndStop() {
+    // Final flush of any remaining audio
+    if (this.audioBufferQueue.length > 0) {
+      this.flushAudioQueue();
+    }
+    
+    this.audioIdleTimeout = null;
+    this.audioChunksReceived = 0;
+    
+    // Reset adaptive buffer for next stream
+    this.bufferUnderrunCount = 0;
+    this.minBufferSamples = 24000 * 0.1;
+  }
+
+  private flushAudioQueue() {
+    if (!this.outputAudioContext || !this.gainNode || this.audioBufferQueue.length === 0) {
+      return;
+    }
+
+    // Calculate total length
+    let totalLength = 0;
+    for (const chunk of this.audioBufferQueue) {
+      totalLength += chunk.length;
+    }
+
+    if (totalLength === 0) return;
+
+    // Create combined buffer
+    const combinedData = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of this.audioBufferQueue) {
+      combinedData.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    // Clear the queue
+    this.audioBufferQueue = [];
+    this.pendingSamples = 0;
+
+    // Create AudioBuffer from combined data
+    const combinedBuffer = this.outputAudioContext.createBuffer(
+      1, 
+      totalLength, 
+      this.SAMPLE_RATE
+    );
+    combinedBuffer.getChannelData(0).set(combinedData);
+
+    // Emit frequency data for phoneme detection
+    this.emitFrequencyDataFromBuffer(combinedData);
+
+    // Schedule playback with proper timing
+    const now = this.outputAudioContext.currentTime;
+    let startAt: number;
+
+    // Determine start time - never overlap with already scheduled audio
+    if (this.scheduledEndTime > now) {
+      // Audio is still playing - schedule after it ends
+      startAt = this.scheduledEndTime;
+    } else {
+      // No audio playing or we've fallen behind - start now
+      if (this.scheduledEndTime > 0 && this.scheduledEndTime < now) {
+        // We had a gap - this is an underrun
+        this.bufferUnderrunCount++;
+        if (this.minBufferSamples < this.MAX_BUFFER_SAMPLES) {
+          this.minBufferSamples = Math.min(
+            this.MAX_BUFFER_SAMPLES,
+            this.minBufferSamples + (24000 * 0.03)
+          );
+          console.log(`[Audio] Buffer underrun #${this.bufferUnderrunCount}, buffer now ${Math.round(this.minBufferSamples / 24)}ms`);
+        }
+      }
+      startAt = now;
     }
 
     const source = this.outputAudioContext.createBufferSource();
-    source.buffer = buffer;
+    source.buffer = combinedBuffer;
     source.connect(this.gainNode);
     source.start(startAt);
 
-    this.nextStartTime = startAt + buffer.duration;
+    // Track when this audio will end
+    this.scheduledEndTime = startAt + combinedBuffer.duration;
+    this.nextStartTime = this.scheduledEndTime;
+  }
+
+  private emitFrequencyDataFromBuffer(audioData: Float32Array) {
+    // Simple FFT-like frequency estimation for phoneme detection
+    if (audioData.length < 256) return;
+
+    // Take a sample from the middle of the buffer for analysis
+    const sampleStart = Math.floor(audioData.length / 2) - 128;
+    const sample = audioData.slice(sampleStart, sampleStart + 256);
+
+    // Convert to Uint8Array format (0-255 range) for compatibility
+    const freqData = new Uint8Array(128);
+    for (let i = 0; i < 128; i++) {
+      const val = Math.abs(sample[i * 2]) + Math.abs(sample[i * 2 + 1]);
+      freqData[i] = Math.min(255, Math.floor(val * 512));
+    }
+
+    this.onFrequencyData(freqData);
   }
 
   private startVisualizerLoop() {

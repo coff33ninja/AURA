@@ -73,16 +73,27 @@ export function decodeAudioData(
         sharedDecodeContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     
-    const dataInt16 = new Int16Array(data.buffer);
+    // Ensure data length is even (Int16 = 2 bytes per sample)
+    const alignedLength = data.length - (data.length % 2);
+    const alignedData = alignedLength < data.length ? data.slice(0, alignedLength) : data;
+    
+    const dataInt16 = new Int16Array(alignedData.buffer, alignedData.byteOffset, alignedLength / 2);
     // Mono channel assumption for Gemini Live
     const numChannels = 1; 
     const frameCount = dataInt16.length;
+    
+    if (frameCount === 0) {
+        // Return empty buffer if no data
+        return sharedDecodeContext.createBuffer(1, 1, sampleRate);
+    }
     
     // Create buffer with the specific sample rate of the audio (24kHz)
     const buffer = sharedDecodeContext.createBuffer(numChannels, frameCount, sampleRate);
     const channelData = buffer.getChannelData(0);
     
+    // Convert Int16 to Float32 with proper normalization
     for (let i = 0; i < frameCount; i++) {
+        // Normalize to -1.0 to 1.0 range
         channelData[i] = dataInt16[i] / 32768.0;
     }
     
