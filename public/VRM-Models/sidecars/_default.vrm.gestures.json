@@ -9,7 +9,21 @@
       "bones": {
         "rightUpperArm": { "x": 0.8, "y": 0, "z": 0.8 },
         "rightLowerArm": { "x": 0, "y": 1.5, "z": 0 },
-        "rightHand": { "x": 0, "y": 0, "z": 0 }
+        "rightHand": { "x": 0, "y": 0, "z": 0 },
+        "rightIndexProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightIndexIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightIndexDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightThumbProximal": { "x": 0.3, "y": 0, "z": -0.5 },
+        "rightThumbDistal": { "x": 0, "y": 0, "z": 0 }
       }
     },
     {
@@ -19,9 +33,23 @@
       "intensity": 1.0,
       "transitionSpeed": 5.0,
       "bones": {
-        "rightUpperArm": { "x": 0.5, "y": 0, "z": -0.5 },
-        "rightLowerArm": { "x": 1.2, "y": 0, "z": 0 },
-        "rightHand": { "x": 0, "y": 0, "z": 1.047 }
+        "rightUpperArm": { "x": 0.8, "y": 0, "z": 0.8 },
+        "rightLowerArm": { "x": 0, "y": 1.5, "z": 0 },
+        "rightHand": { "x": 0, "y": 0, "z": 3.14159 },
+        "rightIndexProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightIndexIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightIndexDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightThumbProximal": { "x": -0.3, "y": 0, "z": -0.5 },
+        "rightThumbDistal": { "x": 0, "y": 0, "z": 0 }
       }
     },
     {
@@ -43,7 +71,21 @@
       "transitionSpeed": 5.0,
       "bones": {
         "rightUpperArm": { "x": 0.524, "y": -0.785, "z": 0 },
-        "rightLowerArm": { "x": 1.047, "y": 0, "z": 0 }
+        "rightLowerArm": { "x": 1.047, "y": 0, "z": 0 },
+        "rightThumbProximal": { "x": 0, "y": 0, "z": 1.2 },
+        "rightThumbDistal": { "x": 0, "y": 0, "z": 0.8 },
+        "rightIndexProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightIndexIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightIndexDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleDistal": { "x": 0, "y": 0, "z": 1.5 }
       }
     },
     {
@@ -66,7 +108,21 @@
       "bones": {
         "rightUpperArm": { "x": 0.5, "y": 0, "z": -0.5 },
         "rightLowerArm": { "x": 1.571, "y": 0, "z": 0 },
-        "rightHand": { "x": 0, "y": 0, "z": -0.524 }
+        "rightHand": { "x": 0, "y": 0, "z": -0.524 },
+        "rightThumbProximal": { "x": 0, "y": 0, "z": 1.2 },
+        "rightThumbDistal": { "x": 0, "y": 0, "z": 0.8 },
+        "rightIndexProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightIndexIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightIndexDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightRingProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleDistal": { "x": 0, "y": 0, "z": 1.5 }
       }
     },
     {
@@ -78,7 +134,21 @@
       "bones": {
         "rightUpperArm": { "x": 0.5, "y": 0, "z": -0.5 },
         "rightLowerArm": { "x": 1.047, "y": 0, "z": 0 },
-        "rightHand": { "x": 0, "y": -0.785, "z": 0 }
+        "rightHand": { "x": 0, "y": -0.785, "z": 0 },
+        "rightThumbProximal": { "x": 0.5, "y": 0, "z": 0.3 },
+        "rightThumbDistal": { "x": 0.3, "y": 0, "z": 0.2 },
+        "rightIndexProximal": { "x": 0.8, "y": 0, "z": 0.3 },
+        "rightIndexIntermediate": { "x": 0.8, "y": 0, "z": 0 },
+        "rightIndexDistal": { "x": 0.5, "y": 0, "z": 0 },
+        "rightMiddleProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightRingProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightRingIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightRingDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightLittleProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightLittleIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightLittleDistal": { "x": 0, "y": 0, "z": 0 }
       }
     },
     {
@@ -90,7 +160,21 @@
       "bones": {
         "rightUpperArm": { "x": 0.5, "y": 0, "z": -0.5 },
         "rightLowerArm": { "x": 1.2, "y": 0, "z": 0 },
-        "rightHand": { "x": 1.571, "y": 0, "z": 0 }
+        "rightHand": { "x": 0, "y": 0, "z": 0 },
+        "rightThumbProximal": { "x": 0, "y": 0, "z": 1.2 },
+        "rightThumbDistal": { "x": 0, "y": 0, "z": 0.8 },
+        "rightIndexProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightIndexIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightIndexDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightMiddleDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightRingDistal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleProximal": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleIntermediate": { "x": 0, "y": 0, "z": 1.5 },
+        "rightLittleDistal": { "x": 0, "y": 0, "z": 1.5 }
       }
     },
     {
@@ -102,7 +186,21 @@
       "bones": {
         "rightUpperArm": { "x": 0.5, "y": 0, "z": -0.5 },
         "rightLowerArm": { "x": 1.2, "y": 0, "z": 0 },
-        "rightHand": { "x": 0, "y": 0, "z": 0 }
+        "rightHand": { "x": 0, "y": 0, "z": 0 },
+        "rightThumbProximal": { "x": 0.3, "y": 0, "z": -0.5 },
+        "rightThumbDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightIndexProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightIndexIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightIndexDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightMiddleDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightRingProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightRingIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightRingDistal": { "x": 0, "y": 0, "z": 0 },
+        "rightLittleProximal": { "x": 0, "y": 0, "z": 0 },
+        "rightLittleIntermediate": { "x": 0, "y": 0, "z": 0 },
+        "rightLittleDistal": { "x": 0, "y": 0, "z": 0 }
       }
     },
     {
