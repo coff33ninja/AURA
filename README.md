@@ -384,6 +384,21 @@ Fires: Coordinated expression + posture + gesture + gaze + idle + mode
    ```
    Opens at `https://localhost:3000` (HTTPS required for microphone access)
 
+   **Access from phone on same network:**
+   - Use one of the Network URLs shown in terminal (e.g., `https://10.0.0.101:3000`)
+   - Note: Self-signed certificate may need approval on mobile browser
+
+   **Access from phone remotely (outside network):**
+   Install and use ngrok to expose your dev server:
+   ```bash
+   # Install ngrok globally (once)
+   npm install -g ngrok
+   
+   # In another terminal, expose your dev server
+   ngrok http 3000
+   ```
+   Then share the generated ngrok URL (e.g., `https://xxxxx-xx-xxx-xxx-xx.ngrok.io`) with anyone to access from their phone or computer.
+
 5. **Build for production:**
    ```bash
    npm run build
