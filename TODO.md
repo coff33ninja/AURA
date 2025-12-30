@@ -124,7 +124,7 @@
 
 ### File Size Crisis (URGENT)
 Current line counts are unsustainable:
-- `BehaviorEditor.tsx` - **2512 lines** (15 functions, easiest to split)
+- `BehaviorEditor.tsx` - **SPLIT COMPLETE ✅** (was 2512 lines → now 6 lines re-export)
 - `NeuralCore.tsx` - **1938 lines** (1 monolithic component)
 - `App.tsx` - **1369 lines** (1 monolithic component)
 
@@ -143,19 +143,23 @@ node scripts/split-component.mjs extract-function components/BehaviorEditor.tsx 
 node scripts/split-component.mjs create-barrel components/behavior-editor/shared
 ```
 
-#### BehaviorEditor.tsx Split Plan:
-- [ ] `components/behavior-editor/index.tsx` - Main container, tab navigation
-- [ ] `components/behavior-editor/TransformTab.tsx` - Position, rotation, scale, camera
-- [ ] `components/behavior-editor/BodyTab.tsx` - Arm/spine controls
-- [ ] `components/behavior-editor/HandsTab.tsx` - Finger bone controls with presets
-- [ ] `components/behavior-editor/FacialTab.tsx` - Expression/mouth/eyes controls
-- [ ] `components/behavior-editor/ExpressionsTab.tsx` - Expression mappings
-- [ ] `components/behavior-editor/GesturesTab.tsx` - Gesture editor with bone controls
-- [ ] `components/behavior-editor/IdleTab.tsx` - Breathing, blinking, sway
-- [ ] `components/behavior-editor/LipSyncTab.tsx` - Phoneme detection settings
-- [ ] `components/behavior-editor/ReactionsTab.tsx` - Reaction step editor
-- [ ] `components/behavior-editor/BackgroundTab.tsx` - Background presets
-- [ ] `components/behavior-editor/shared.tsx` - Slider, Toggle, SectionHeader components
+#### BehaviorEditor.tsx Split Plan: ✅ COMPLETE
+- [x] `components/behavior-editor/index.tsx` - Main container, tab navigation
+- [x] `components/behavior-editor/tabs/TransformTab.tsx` - Position, rotation, scale, camera
+- [x] `components/behavior-editor/tabs/BodyTab.tsx` - Arm/spine controls
+- [x] `components/behavior-editor/tabs/HandsTab.tsx` - Finger bone controls with presets
+- [x] `components/behavior-editor/tabs/FacialTab.tsx` - Expression/mouth/eyes controls
+- [x] `components/behavior-editor/tabs/ExpressionsTab.tsx` - Expression mappings
+- [x] `components/behavior-editor/tabs/GesturesTab.tsx` - Gesture editor with bone controls
+- [x] `components/behavior-editor/tabs/IdleTab.tsx` - Breathing, blinking, sway
+- [x] `components/behavior-editor/tabs/LipSyncTab.tsx` - Phoneme detection settings
+- [x] `components/behavior-editor/tabs/ReactionsTab.tsx` - Reaction step editor
+- [x] `components/behavior-editor/tabs/BackgroundTab.tsx` - Background presets
+- [x] `components/behavior-editor/tabs/ImportExportTab.tsx` - Import/Export functionality
+- [x] `components/behavior-editor/shared/Slider.tsx` - Slider component
+- [x] `components/behavior-editor/shared/Toggle.tsx` - Toggle component
+- [x] `components/behavior-editor/shared/SectionHeader.tsx` - Section header component
+- [x] Barrel exports: `tabs/index.ts`, `shared/index.ts`
 
 #### NeuralCore.tsx Split Plan:
 - [ ] `hooks/useVrmLoader.ts` - VRM loading, disposal, model switching
@@ -180,7 +184,7 @@ node scripts/split-component.mjs create-barrel components/behavior-editor/shared
 
 ## 📊 Test Coverage
 
-- **285 tests passing** across 19 test files
+- **323 tests passing** across 23 test files
 - Property-based tests using fast-check for:
   - Screenshot capture (Property 1)
   - VRM validation (Property 2)
